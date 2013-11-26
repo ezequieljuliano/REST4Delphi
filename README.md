@@ -7,7 +7,7 @@ The CustomDMVCFramework API was developed and tested in Delphi XE4.
 ## External Dependencies ##
 To use CustomDMVCFramework you must install in your IDE the following projects:
 
-- DelphiMVCFramework (https://code.google.com/p/delphimvcframework/);
+- DelphiMVCFramework (https://code.google.com/p/delphimvcframework/) - (For now it is necessary to change the class TMVCEngine putting ExecuteAction method as virtual);
 - Delphi Spring Framework (https://code.google.com/p/delphi-spring-framework/);
 
 ## How to Use ##
