@@ -1,24 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
-  <Transactions>
-    <Transaction>2013/11/26 09:18:47.995,=C:\CustomDMVCFramework\src\CustomDMVC.pas</Transaction>
-    <Transaction>2013/11/26 09:18:55.597,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:19:08.611,C:\CustomDMVCFramework\src\CustomDMVC.Impl.pas=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:19:35.207,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:19:52.346,C:\CustomDMVCFramework\src\CustomDMVC.Codification.pas=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:20:28.518,=C:\CustomDMVCFramework\src\Msys.DMVCWebModule.pas</Transaction>
-    <Transaction>2013/11/26 09:20:55.844,C:\CustomDMVCFramework\src\CustomDMVC.WebModule.pas=C:\CustomDMVCFramework\src\Msys.DMVCWebModule.pas</Transaction>
-    <Transaction>2013/11/26 09:20:55.844,C:\CustomDMVCFramework\src\CustomDMVC.WebModule.dfm=C:\CustomDMVCFramework\src\Msys.DMVCWebModule.dfm</Transaction>
-    <Transaction>2013/11/26 09:21:12.879,C:\CustomDMVCFramework\src\CustomDMVC.WebModuleBase.pas=C:\CustomDMVCFramework\src\CustomDMVC.WebModule.pas</Transaction>
-    <Transaction>2013/11/26 09:21:12.879,C:\CustomDMVCFramework\src\CustomDMVC.WebModuleBase.dfm=C:\CustomDMVCFramework\src\CustomDMVC.WebModule.dfm</Transaction>
-    <Transaction>2013/11/26 09:21:27.288,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:21:39.082,C:\CustomDMVCFramework\src\CustomDMVC.Module.Register.pas=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:46:15.701,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:46:29.756,C:\CustomDMVCFramework\unittest\CustomDMVC.UnitTest.pas=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:52:26.999,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:53:00.128,C:\CustomDMVCFramework\unittest\App.WebModule.pas=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:53:00.128,C:\CustomDMVCFramework\unittest\App.WebModule.dfm=C:\CustomDMVCFramework\unittest\Unit1.dfm</Transaction>
-    <Transaction>2013/11/26 09:54:05.191,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
-    <Transaction>2013/11/26 09:54:10.737,C:\CustomDMVCFramework\unittest\App.Controller.pas=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+	<Transactions>
+    <Transaction>2013/11/26 09:18:47.000.995,=C:\CustomDMVCFramework\src\CustomDMVC.pas</Transaction>
+    <Transaction>2013/11/26 09:18:55.000.597,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+    <Transaction>2013/11/26 09:19:08.000.611,C:\CustomDMVCFramework\unittest\Unit1.pas=C:\CustomDMVCFramework\src\CustomDMVC.Impl.pas</Transaction>
+    <Transaction>2013/11/26 09:19:35.000.207,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+    <Transaction>2013/11/26 09:19:52.000.346,C:\CustomDMVCFramework\unittest\Unit1.pas=C:\CustomDMVCFramework\src\CustomDMVC.Codification.pas</Transaction>
+    <Transaction>2013/11/26 09:20:28.000.518,=C:\CustomDMVCFramework\src\Msys.DMVCWebModule.pas</Transaction>
+    <Transaction>2013/11/26 09:20:55.000.844,C:\CustomDMVCFramework\src\Msys.DMVCWebModule.pas=C:\CustomDMVCFramework\src\CustomDMVC.WebModule.pas</Transaction>
+    <Transaction>2013/11/26 09:20:55.000.844,C:\CustomDMVCFramework\src\Msys.DMVCWebModule.dfm=C:\CustomDMVCFramework\src\CustomDMVC.WebModule.dfm</Transaction>
+    <Transaction>2013/11/26 09:21:12.000.879,C:\CustomDMVCFramework\src\CustomDMVC.WebModule.pas=C:\CustomDMVCFramework\src\CustomDMVC.WebModuleBase.pas</Transaction>
+    <Transaction>2013/11/26 09:21:12.000.879,C:\CustomDMVCFramework\src\CustomDMVC.WebModule.dfm=C:\CustomDMVCFramework\src\CustomDMVC.WebModuleBase.dfm</Transaction>
+    <Transaction>2013/11/26 09:21:27.000.288,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+    <Transaction>2013/11/26 09:21:39.000.082,C:\CustomDMVCFramework\unittest\Unit1.pas=C:\CustomDMVCFramework\src\CustomDMVC.Module.Register.pas</Transaction>
+    <Transaction>2013/11/26 09:46:15.000.701,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+    <Transaction>2013/11/26 09:46:29.000.756,C:\CustomDMVCFramework\unittest\Unit1.pas=C:\CustomDMVCFramework\unittest\CustomDMVC.UnitTest.pas</Transaction>
+    <Transaction>2013/11/26 09:52:26.000.999,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+    <Transaction>2013/11/26 09:53:00.000.128,C:\CustomDMVCFramework\unittest\Unit1.pas=C:\CustomDMVCFramework\unittest\App.WebModule.pas</Transaction>
+    <Transaction>2013/11/26 09:53:00.000.128,C:\CustomDMVCFramework\unittest\Unit1.dfm=C:\CustomDMVCFramework\unittest\App.WebModule.dfm</Transaction>
+    <Transaction>2013/11/26 09:54:05.000.191,=C:\CustomDMVCFramework\unittest\Unit1.pas</Transaction>
+    <Transaction>2013/11/26 09:54:10.000.737,C:\CustomDMVCFramework\unittest\Unit1.pas=C:\CustomDMVCFramework\unittest\App.Controller.pas</Transaction>
   </Transactions>
 </BorlandProject>

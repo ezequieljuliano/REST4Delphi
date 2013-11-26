@@ -1,4 +1,5 @@
 inherited AppWebModule: TAppWebModule
+  OldCreateOrder = True
   Actions = <
     item
       Default = True
