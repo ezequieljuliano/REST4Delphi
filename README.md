@@ -59,4 +59,18 @@ Now create your server:
       TCustomMVC.ServerManager.StartServers();
     end;
 
+Add to your .dpr registration of classes for working with dependency injection, the Unit is responsible for this CustomDMVC.Module.Register.pas:
+
+    uses
+      DUnitTestRunner,
+      CustomDMVC in '..\src\CustomDMVC.pas',
+      CustomDMVC.Impl in '..\src\CustomDMVC.Impl.pas',
+      CustomDMVC.Codification in '..\src\CustomDMVC.Codification.pas',
+      CustomDMVC.WebModuleBase in '..\src\CustomDMVC.WebModuleBase.pas' {CustomDMVCWebModuleBase: TWebModule} ,
+      CustomDMVC.UnitTest in 'CustomDMVC.UnitTest.pas',
+      App.WebModule in 'App.WebModule.pas' {AppWebModule: TWebModule} ,
+      App.Controller in 'App.Controller.pas',
+      CustomDMVC.Module.Register in '..\src\CustomDMVC.Module.Register.pas';
+
 Analyze the unit tests they will assist you.
+
