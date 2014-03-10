@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2014/03/10 09:18:54.027,=C:\Users\Admin\Documents\RAD Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2014/03/10 09:19:05.734,C:\Users\Admin\Documents\RAD Studio\Projects\BasicDemoClient.dproj=C:\Users\Admin\Documents\RAD Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>2014/03/10 09:20:26.519,\\VBOXSVR\d_drive\GitHub\REST4Delphi\samples\basicdemo\client\Frm.Main.Client.pas=C:\Users\Admin\Documents\RAD Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2014/03/10 09:20:26.519,\\VBOXSVR\d_drive\GitHub\REST4Delphi\samples\basicdemo\client\Frm.Main.Client.dfm=C:\Users\Admin\Documents\RAD Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>2014/03/10 09:20:30.435,\\VBOXSVR\d_drive\GitHub\REST4Delphi\samples\basicdemo\client\BasicDemoClient.dproj=C:\Users\Admin\Documents\RAD Studio\Projects\BasicDemoClient.dproj</Transaction>
+    <Transaction>2014/03/10 09:33:01.524,=\\VBOXSVR\d_drive\GitHub\REST4Delphi\samples\basicdemo\server\User.pas</Transaction>
+  </Transactions>
+</BorlandProject>
