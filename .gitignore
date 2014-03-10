@@ -3,3 +3,6 @@
 /unittest/__history
 
 /unittest/Win32/Debug
+
+/samples/basicdemo/client/Win32/Debug
+/samples/basicdemo/server/Win32/Debug

@@ -1,30 +1,38 @@
-# Custom Delphi MVC Framework #
+# REST For Delphi #
 
-The CustomDMVCFramework is an API to facilitate the use of the project DelphiMVCFramework (https://code.google.com/p/delphimvcframework/).
+The REST4Delphi is an API to facilitate the use of the project Delphi MVC Framework (https://code.google.com/p/delphimvcframework/).
 
-The CustomDMVCFramework API was developed and tested in Delphi XE4.
+With this API you can create servers that provide REST services. And consume REST services written in any programming language.
+
+The REST4Delphi API was developed and tested in Delphi XE5.
 
 ## External Dependencies ##
-To use CustomDMVCFramework you must install in your IDE the following projects:
 
-- DelphiMVCFramework (https://code.google.com/p/delphimvcframework/) - (For now it is necessary to change the class TMVCEngine putting ExecuteAction method as virtual);
-- Delphi Spring Framework (https://code.google.com/p/delphi-spring-framework/);
+The REST4Delphi is coupled to DMVCFramework. Therefore this dependence is included in the project within the "dependencies" folder.
 
-## How to Use ##
+- Delphi MVC Framework (https://code.google.com/p/delphimvcframework/);
+
+## Using REST4Delphi API ##
+
+Using this library will is very simple, you simply add the Search Path of your IDE or your project the following directories:
+
+- REST4Delphi\src\
+
+## How to Create a Server ##
 
 First create your Controller:
 
-     [MVCPath('/')]
-     TAppController = class(TCustomMVCController)
-     public
-       [MVCPath('/hello')]
-       [MVCHTTPMethod([httpGET])]
-       procedure HelloWorld(ctx: TWebContext);
-     end;
+       [MVCPath('/')]
+       TAppController = class(TRESTController)
+       public
+         [MVCPath('/hello')]
+         [MVCHTTPMethod([httpGET])]
+         procedure HelloWorld(ctx: TWebContext);
+       end;
 
-Write a heritage CustomDMVC.WebModuleBase and implement the abstract method Initialize:
+Write a heritage REST4D.WebModule and implement the abstract method Initialize:
 
-     TAppWebModule = class(TCustomDMVCWebModuleBase)
+     TAppWebModule = class(TRESTWebModule)
      public
        procedure Initialize; override;
      end;
@@ -32,8 +40,8 @@ Write a heritage CustomDMVC.WebModuleBase and implement the abstract method Init
     procedure TAppWebModule.Initialize;
     begin
       inherited;
-      MVCEngine.AddController(TAppController);
-      MVCEngine.ServerName := 'Server1';
+      RESTEngine.AddController(TAppController);
+      RESTEngine.ServerName := 'Server1';
     end;
 
 Add a public variable of type TComponentClass on your WebModule:
@@ -43,34 +51,42 @@ Add a public variable of type TComponentClass on your WebModule:
 
 Now create your server:
 
+    //Declare in your class or Unit   
+	private
+        FServerContainer: IRESTServerContainer;    
+
     procedure CreateServer;
+	var
+	  vServerInfo: IRESTServerInfo;
+	begin
+	  inherited;
+	  vServerInfo := TRESTServerInfoFactory.GetInstance;
+	  vServerInfo.ServerName := 'Server1';
+	  vServerInfo.Port := 3000;
+	  vServerInfo.MaxConnections := 1024;
+	  vServerInfo.WebModuleClass := AppWebModuleClass;
+	  vServerInfo.Authentication.AddUser('ezequiel', '123');
+	
+	  FServerContainer := TRESTServerContainerFactory.GetSingleton;
+	  FServerContainer.CreateServer(vServerInfo);
+	  FServerContainer.StartServers;
+	end;
+
+## Using the Client ##
+
+It's very simple:
+
     var
-      vServerInfo: ICustomMVCServerInfo;
+      vRESTCli: TRESTfulClient;
     begin
-      inherited;
-      vServerInfo := TCustomMVC.NewServerInfo;
-      vServerInfo.ServerName := 'Server1';
-      vServerInfo.Port := 3000;
-      vServerInfo.MaxConnections := 100;
-      vServerInfo.WebModuleClass := AppWebModuleClass;
-      vServerInfo.Authentication.AddUser('ezequiel', '123');
-    
-      TCustomMVC.ServerManager.CreateServer(vServerInfo);
-      TCustomMVC.ServerManager.StartServers();
+      vRESTCli := TRESTfulClient.Create('localhost', 3000);
+      try
+         vRESTCli.Resource('/hello').Params([]);
+         vRESTCli.Authorization('ezequiel', '123');
+		 ShowMessage(vRESTCli.GET.AsString);    
+      finally
+         FreeAndNil(vRESTCli);
+      end;
     end;
 
-Add to your .dpr registration of classes for working with dependency injection, the Unit is responsible for this CustomDMVC.Module.Register.pas:
-
-    uses
-      DUnitTestRunner,
-      CustomDMVC in '..\src\CustomDMVC.pas',
-      CustomDMVC.Impl in '..\src\CustomDMVC.Impl.pas',
-      CustomDMVC.Codification in '..\src\CustomDMVC.Codification.pas',
-      CustomDMVC.WebModuleBase in '..\src\CustomDMVC.WebModuleBase.pas' {CustomDMVCWebModuleBase: TWebModule} ,
-      CustomDMVC.UnitTest in 'CustomDMVC.UnitTest.pas',
-      App.WebModule in 'App.WebModule.pas' {AppWebModule: TWebModule} ,
-      App.Controller in 'App.Controller.pas',
-      CustomDMVC.Module.Register in '..\src\CustomDMVC.Module.Register.pas';
-
-Analyze the unit tests they will assist you.
-
+Analyze the unit tests and samples they will assist you.
