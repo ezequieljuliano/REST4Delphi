@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2012/07/13 09:42:57.000.688,C:\VCL\VaniPackage\IOCP\IdWinsock2.pas=C:\VCL\VaniPackage\IOCP\Iocp.Winsock2.pas</Transaction>
+    <Transaction>2012/07/13 09:43:05.000.013,C:\VCL\VaniPackage\IOCP\IdWship6.pas=C:\VCL\VaniPackage\IOCP\Iocp.Wship6.pas</Transaction>
+    <Transaction>2012/07/13 09:47:30.000.555,=C:\VCL\VaniPackage\IOCP\IocpThreadPool.pas</Transaction>
+    <Transaction>2012/07/13 09:47:30.000.427,=C:\VCL\VaniPackage\IOCP\IocpLogger.pas</Transaction>
+    <Transaction>2012/07/13 09:47:30.000.592,=C:\VCL\VaniPackage\IOCP\IocpUtils.pas</Transaction>
+    <Transaction>2012/07/13 09:47:44.000.356,C:\VCL\VaniPackage\IOCP\IocpFileClient.pas=C:\VCL\VaniPackage\IOCP\Iocp.FileClient.pas</Transaction>
+    <Transaction>2012/07/13 09:47:51.000.033,C:\VCL\VaniPackage\IOCP\IocpFileServer.pas=C:\VCL\VaniPackage\IOCP\Iocp.FileServer.pas</Transaction>
+    <Transaction>2012/07/13 09:48:00.000.181,C:\VCL\VaniPackage\IOCP\IocpHttpServer.pas=C:\VCL\VaniPackage\IOCP\Iocp.HttpServer.pas</Transaction>
+    <Transaction>2012/07/13 09:48:03.000.572,C:\VCL\VaniPackage\IOCP\IocpHttpTunnel.pas=C:\VCL\VaniPackage\IOCP\Iocp.HttpTunnel.pas</Transaction>
+    <Transaction>2012/07/13 09:48:11.000.016,C:\VCL\VaniPackage\IOCP\IocpLogger.pas=C:\VCL\VaniPackage\IOCP\Iocp.Logger.pas</Transaction>
+    <Transaction>2012/07/13 09:48:21.000.297,C:\VCL\VaniPackage\IOCP\IocpPacketSocket.pas=C:\VCL\VaniPackage\IOCP\Iocp.PacketSocket.pas</Transaction>
+    <Transaction>2012/07/13 09:48:30.000.754,C:\VCL\VaniPackage\IOCP\IocpTcpSocket.pas=C:\VCL\VaniPackage\IOCP\Iocp.TcpSocket.pas</Transaction>
+    <Transaction>2012/07/13 09:48:34.000.902,C:\VCL\VaniPackage\IOCP\IocpThreadPool.pas=C:\VCL\VaniPackage\IOCP\Iocp.ThreadPool.pas</Transaction>
+    <Transaction>2012/07/13 09:48:41.000.418,C:\VCL\VaniPackage\IOCP\IocpUtils.pas=C:\VCL\VaniPackage\IOCP\Iocp.Utils.pas</Transaction>
+    <Transaction>2012/07/13 09:48:48.000.538,C:\VCL\VaniPackage\IOCP\IocpVariantSocket.pas=C:\VCL\VaniPackage\IOCP\Iocp.VariantSocket.pas</Transaction>
+  </Transactions>
+</BorlandProject>
