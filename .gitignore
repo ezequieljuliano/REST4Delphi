@@ -6,3 +6,5 @@
 
 /samples/basicdemo/client/Win32/Debug
 /samples/basicdemo/server/Win32/Debug
+
+/dependencies/delphimvcframework/sources/__history/*.~1~

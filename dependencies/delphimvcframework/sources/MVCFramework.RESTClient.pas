@@ -517,7 +517,7 @@ end;
 function TRESTClient.GetRawBody: TStringStream;
 begin
   if not Assigned(FRawBody) then
-    FRawBody := TStringStream.Create('', TEncoding.UTF8); //Ezequiel J. Müller
+    FRawBody := TStringStream.Create('');
   Result := FRawBody;
 end;
 
