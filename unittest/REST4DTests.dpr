@@ -1,5 +1,5 @@
 (*
-  Copyright 2014 Ezequiel Juliano Müller - ezequieljuliano@gmail.com
+  Copyright 2014 Ezequiel Juliano Müller | Microsys Sistemas Ltda
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
   limitations under the License.
 *)
 
-program REST4D.Tests;
+program REST4DTests;
 {
 
   Delphi DUnit Test Project

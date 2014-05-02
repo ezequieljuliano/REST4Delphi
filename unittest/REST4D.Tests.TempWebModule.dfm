@@ -1,4 +1,5 @@
 inherited TempWebModule: TTempWebModule
+  OldCreateOrder = True
   Actions = <
     item
       Default = True
