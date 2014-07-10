@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{A11862D6-FC14-4DA1-8E4F-623ED59166C4}</ProjectGuid>
-        <ProjectVersion>15.1</ProjectVersion>
+        <ProjectVersion>15.4</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <MainSource>BasicDemoClient.dpr</MainSource>
         <Base>True</Base>
@@ -40,6 +40,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <SanitizedProjectName>BasicDemoClient</SanitizedProjectName>
         <DCC_BplOutput>.\$(Platform)\$(Config)\pkg</DCC_BplOutput>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Locale>1046</VerInfo_Locale>

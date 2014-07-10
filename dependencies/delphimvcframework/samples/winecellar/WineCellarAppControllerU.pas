@@ -48,7 +48,7 @@ type
 implementation
 
 uses
-  System.SysUtils;
+  System.SysUtils, WinesBO, MVCFramework.Logger;
 
 procedure TWineCellarApp.FindWines(ctx: TWebContext);
 begin
@@ -76,13 +76,30 @@ begin
 end;
 
 procedure TWineCellarApp.SaveWine(ctx: TWebContext);
+var
+  Wine: TWine;
 begin
-  dm.AddWine(ctx.Request.BodyAsJSONObject);
+  Wine := ctx.Request.BodyAs<TWine>;
+  try
+    dm.AddWine(Wine);
+    Log(TLogLevel.levNormal, 'Wine correctly saved');
+  finally
+    Wine.Free;
+  end;
 end;
 
 procedure TWineCellarApp.UpdateWineById(ctx: TWebContext);
+var
+  Wine: TWine;
 begin
-  Render(dm.UpdateWine(ctx.Request.BodyAsJSONObject));
+  Wine := ctx.Request.BodyAs<TWine>;
+  try
+    dm.UpdateWine(Wine);
+    Log(TLogLevel.levNormal, 'Wine correctly updated');
+  finally
+    Wine.Free;
+  end;
+  Render(200, 'Wine updated');
 end;
 
 procedure TWineCellarApp.WineById(ctx: TWebContext);
@@ -90,17 +107,25 @@ begin
   // different behaviour according to the request http method
   case ctx.Request.HTTPMethod of
     httpDELETE:
-      Render(dm.DeleteWine(StrToInt(ctx.Request.Params['id'])));
+      begin
+        dm.DeleteWine(StrToInt(ctx.Request.Params['id']));
+        Log(TLogLevel.levNormal, 'Wine deleted');
+        Render(200, 'Wine deleted');
+      end;
     httpGET:
-      Render(dm.GetWineById(StrToInt(ctx.Request.Params['id'])));
+      begin
+        Render(dm.GetWineById(StrToInt(ctx.Request.Params['id'])));
+      end
   else
     raise Exception.Create('Invalid http method for action');
   end;
+
 end;
 
 procedure TWineCellarApp.WinesList(ctx: TWebContext);
 begin
   Render(dm.FindWines(''));
+  Log(TLogLevel.levNormal, 'Getting Wines list');
 end;
 
 end.

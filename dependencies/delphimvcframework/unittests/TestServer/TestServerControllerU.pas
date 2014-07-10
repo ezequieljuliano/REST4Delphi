@@ -14,7 +14,7 @@ type
     procedure ReqWithParams(ctx: TWebContext);
 
     [MVCPath('/echo/($par1)/($par2)/($par3)')]
-    [MVCHTTPMethod([httpPOST, httpPUT])]
+    [MVCHTTPMethod([httpPOST, httpPUT, httpPATCH])]
     procedure EchoBody(ctx: TWebContext);
 
     [MVCPath('/session/($value)')]
@@ -50,7 +50,7 @@ type
     [MVCPath('/testconsumes')]
     [MVCHTTPMethod([httpGET, httpPOST, httpPUT])]
     [MVCConsumes('application/json')]
-    [MVCProduces('application/json')]
+    [MVCProduces('application/json', 'utf-8')]
     procedure TestConsumesProduces(ctx: TWebContext);
 
     [MVCPath('/testconsumes')]
@@ -64,12 +64,23 @@ type
     [MVCProduces('application/json')]
     procedure TestPOSTObject(ctx: TWebContext);
 
+    [MVCPath('/path1/($id)')]
+    [MVCPath('/path2/($id)/2/($par)')]
+    [MVCPath('/path3/($id)/2/($par)/3')]
+    [MVCPath('/path4/($id)/2/($par)/3/4')]
+    [MVCHTTPMethod([httpPOST, httpPUT])]
+    procedure TestMultiplePaths(ctx: TWebContext);
+
   end;
 
 implementation
 
 uses
+{$IF not Defined(VER270)}
   Data.DBXJSON,
+{$ELSE}
+  System.JSON,
+{$IFEND}
   MVCFramework.Commons,
   Web.HTTPApp, BusinessObjectsU;
 
@@ -194,11 +205,18 @@ procedure TTestServerController.TestEncoding(ctx: TWebContext);
 var
   Obj: TJSONObject;
 begin
+  ContentCharset := TMVCConstants.DEFAULT_CONTENT_CHARSET;
   Obj := TJSONObject.Create;
   Obj.AddPair('name1', 'jørn');
   Obj.AddPair('name2', 'Što je Unicode?');
   Obj.AddPair('name3', 'àèéìòù');
   Render(Obj);
+end;
+
+procedure TTestServerController.TestMultiplePaths(ctx: TWebContext);
+begin
+  ContentType := TMVCMimeType.TEXT_PLAIN;
+  Render(ctx.Request.Params['id']);
 end;
 
 procedure TTestServerController.TestPOSTObject(ctx: TWebContext);

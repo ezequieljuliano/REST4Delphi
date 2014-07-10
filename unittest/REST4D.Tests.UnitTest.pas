@@ -190,16 +190,16 @@ end;
 
 procedure TTestREST4D.TestHelloWorld;
 var
-  vRESTCli: TRESTfulClient;
+  vRestCli: TRESTfulClient;
 begin
-  vRESTCli := TRESTfulClient.Create('localhost', 3000);
+  vRestCli := TRESTfulClient.Create('localhost', 3000);
   try
-    vRESTCli.Resource('/hello').Params([]);
-    vRESTCli.Authorization('ezequiel', '123');
+    vRestCli.Resource('/hello').Params([]);
+    vRestCli.Authorization('ezequiel', '123');
 
-    CheckEqualsString('"Hello World called with GET"', vRESTCli.GET.AsString);
+    CheckEqualsString('"Hello World called with GET"', vRestCli.GET.AsString);
   finally
-    FreeAndNil(vRESTCli);
+    FreeAndNil(vRestCli);
   end;
 end;
 
@@ -241,6 +241,7 @@ begin
   try
     vRestCli.Resource('/users/save').Params([]);
     vRestCli.Authorization('ezequiel', '123');
+    vRestCli.ContentType('application/json; charset=utf-8');
 
     vUsers := TObjectList<TUser>.Create(True);
 

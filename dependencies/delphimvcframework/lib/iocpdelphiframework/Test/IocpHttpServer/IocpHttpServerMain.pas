@@ -172,6 +172,13 @@ begin
     begin
       Connection.AnswerHTML('', '', '', 'haha');
     end);
+
+  FServer.RegisterHandler('GET', '/api/show_file/*',
+    procedure(Connection: TIocpHttpConnection)
+    begin
+      Connection.AnswerHTML('', '', '', Connection.Path.Substring(Connection.Path.LastIndexOf('/') + 1));
+    end);
+
   FServer.RegisterHandler('*', '/abc',
     procedure(Connection: TIocpHttpConnection)
     begin

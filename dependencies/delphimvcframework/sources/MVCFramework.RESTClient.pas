@@ -10,15 +10,19 @@ uses
   IdTCPClient,
   IdHTTP,
   idURI,
-  DBXJSON,
+{$IF not Defined(VER270)}
+  Data.DBXJSON,
+{$ELSE}
+  System.JSON,
+{$IFEND}
   IdMultipartFormData,
-  System.SysUtils,
+  System.SysUtils, Data.DB, IdIOHandler,
   IdCompressorZLib, //Ezequiel J. Müller
   IdSSLOpenSSL; //Ezequiel J. Müller;
 
 type
   TArrayOfString = array of string;
-  THttpCommand = (httpGET, httpPOST, httpPUT, httpDELETE);
+  THttpCommand = (httpGET, httpPOST, httpPUT, httpDELETE, httpPATCH, httpTRACE);
 
   IRESTResponse = interface
     function BodyAsString: string;
@@ -27,9 +31,10 @@ type
     function ResponseCode: Word;
     function ResponseText: string;
     function Headers: TStringlist;
-    function GetContentType: String;
-    function GetContentEncoding: String;
+    function GetContentType: string;
+    function GetContentEncoding: string;
     function Body: TStringStream;
+    function GetHeaderValue(const Name: string): string;
     procedure SetResponseCode(AResponseCode: Word);
     procedure SetResponseText(AResponseText: string);
     procedure SetHeaders(AHeaders: TStrings);
@@ -43,9 +48,10 @@ type
     FHeaders: TStringlist;
     FBodyAsJSONValue: TJSONValue;
     FContentType: string;
-    FContentEncoding: String;
-    function GetHeader(const Value: String): String;
+    FContentEncoding: string;
+    function GetHeader(const Value: string): string;
   public
+
     function BodyAsString: string;
     function BodyAsJsonObject: TJSONObject;
     function BodyAsJsonValue: TJSONValue;
@@ -53,14 +59,15 @@ type
     function ResponseText: string;
     function Headers: TStringlist;
     function Body: TStringStream;
-    function GetContentType: String;
-    function GetContentEncoding: String;
+    function GetContentType: string;
+    function GetContentEncoding: string;
 
     procedure SetResponseCode(AResponseCode: Word);
     procedure SetResponseText(AResponseText: string);
     procedure SetHeaders(AHeaders: TStrings);
     constructor Create; virtual;
     destructor Destroy; override;
+    function GetHeaderValue(const Name: string): string;
   end;
 
   TRESTClient = class(TInterfacedObject)
@@ -80,6 +87,9 @@ type
     FPrimaryThread: TThread;
     FMultiPartFormData: TIdMultiPartFormDataStream;
     FAsynchProcAlways: TProc;
+    FProtocol: string;
+    FSynchronized: Boolean;
+    FContentEncoding: string;
     function EncodeQueryStringParams(const AQueryStringParams: TStrings;
       IncludeQuestionMark: Boolean = true): string;
     procedure SetBodyParams(const Value: TStringlist);
@@ -94,7 +104,7 @@ type
     procedure SetReadTimeout(const Value: Integer);
     function GetReadTimeout: Integer;
     procedure StartAsynchRequest(AHTTPMethod: THttpCommand; AUrl: string;
-      ABodyString: String); overload;
+      ABodyString: string); overload;
     procedure StartAsynchRequest(AHTTPMethod: THttpCommand;
       AUrl: string); overload;
     procedure SetConnectionTimeout(const Value: Integer);
@@ -112,21 +122,21 @@ type
       const AAccept, AContentType, AUrl: string; ABodyParams: TStrings)
       : IRESTResponse;
     function SendHTTPCommandWithBody(const ACommand: THttpCommand;
-      const AAccept, AContentType, AUrl: string; ABodyString: String)
+      const AAccept, AContentType, AUrl: string; ABodyString: string)
       : IRESTResponse;
     procedure HandleRequestCookies;
     function GetMultipartFormData: TIdMultiPartFormDataStream;
 
   public
     constructor Create(const AServerName: string;
-      AServerPort: Word = 80); virtual;
+      AServerPort: Word = 80; AIOHandler: TIdIOHandler = nil); virtual;
     destructor Destroy; override;
 
     function AddFile(const FieldName, FileName: string;
       const ContentType: string = ''): TRESTClient;
 
     function Asynch(AProc: TProc<IRESTResponse>;
-      AProcErr: TProc<Exception> = nil; AProcAlways: TProc = nil): TRESTClient;
+      AProcErr: TProc<Exception> = nil; AProcAlways: TProc = nil; ASynchronized: Boolean = false): TRESTClient;
     function ClearAllParams: TRESTClient;
     function ResetSession: TRESTClient;
     function Accept(const AcceptHeader: string): TRESTClient; overload;
@@ -138,6 +148,9 @@ type
     function ContentType(const ContentTypeHeader: string): TRESTClient;
       overload;
     function ContentType: string; overload;
+    function ContentEncoding(const ContentEncodingHeader: string): TRESTClient;
+      overload;
+    function ContentEncoding: string; overload;
     // requests
     function doGET(AResource: string; AResourceParams: array of string)
       : IRESTResponse;
@@ -147,14 +160,19 @@ type
       AJSONValue: TJSONValue; AOwnsJSONBody: Boolean = true)
       : IRESTResponse; overload;
     function doPOST(AResource: string; AResourceParams: array of string;
-      ABodyString: String): IRESTResponse; overload;
+      ABodyString: string): IRESTResponse; overload;
+    function doPATCH(AResource: string; AResourceParams: array of string;
+      AJSONValue: TJSONValue; AOwnsJSONBody: Boolean = true)
+      : IRESTResponse; overload;
+    function doPATCH(AResource: string; AResourceParams: array of string;
+      ABodyString: string): IRESTResponse; overload;
     function doPUT(AResource: string; AResourceParams: array of string)
       : IRESTResponse; overload;
     function doPUT(AResource: string; AResourceParams: array of string;
       AJSONValue: TJSONValue; AOwnsJSONBody: Boolean = true)
       : IRESTResponse; overload;
     function doPUT(AResource: string; AResourceParams: array of string;
-      ABodyString: String): IRESTResponse; overload;
+      ABodyString: string): IRESTResponse; overload;
     function doDELETE(AResource: string; AResourceParams: array of string)
       : IRESTResponse;
     property BodyParams: TStringlist read GetBodyParams write SetBodyParams;
@@ -167,11 +185,18 @@ type
       write SetConnectionTimeout;
     property RequestHeaders: TStringlist read FRequestHeaders
       write SetRequestHeaders;
+    // dataset specific methods
+    function DSUpdate(const URL: string; DataSet: TDataSet; const KeyValue: string): IRESTResponse;
+    function DSInsert(const URL: string; DataSet: TDataSet): IRESTResponse;
+    function DSDelete(const URL: string; const KeyValue: string): IRESTResponse;
   end;
 
 function StringsToArrayOfString(const AStrings: TStrings): TArrayOfString;
 
 implementation
+
+uses
+  ObjectsMappers;
 
 { TRSF }
 
@@ -202,15 +227,17 @@ function TRESTClient.AddFile(const FieldName, FileName, ContentType: string)
   : TRESTClient;
 begin
   GetMultipartFormData.AddFile(FieldName, FileName, ContentType);
+  Result := Self;
 end;
 
 function TRESTClient.Asynch(AProc: TProc<IRESTResponse>;
-  AProcErr: TProc<Exception>; AProcAlways: TProc): TRESTClient;
+  AProcErr: TProc<Exception>; AProcAlways: TProc; ASynchronized: Boolean): TRESTClient;
 begin
   FNextRequestIsAsynch := true;
   FAsynchProc := AProc;
   FAsynchProcErr := AProcErr;
   FAsynchProcAlways := AProcAlways;
+  FSynchronized := ASynchronized;
   Result := Self;
 end;
 
@@ -226,13 +253,19 @@ begin
   if Assigned(FQueryStringParams) then
     FQueryStringParams.Clear;
   Result := Self;
-  FNextRequestIsAsynch := False;
+  FNextRequestIsAsynch := false;
   FAsynchProc := nil;
   FAsynchProcErr := nil;
   FAsynchProcAlways := nil;
 end;
 
-function TRESTClient.Compression(const pEnabled: Boolean): TRESTClient;
+function TRESTClient.ContentEncoding(const ContentEncodingHeader: string): TRESTClient;
+begin
+  FContentEncoding := ContentEncodingHeader;
+  Result := Self;
+end;
+
+function TRESTClient.Compression(const pEnabled: Boolean): TRESTClient; //Ezequiel J. Müller
 begin
   if pEnabled then
   begin
@@ -249,6 +282,11 @@ begin
   end;
 end;
 
+function TRESTClient.ContentEncoding: string;
+begin
+  Result := FContentEncoding;
+end;
+
 function TRESTClient.ContentType: string;
 begin
   Result := FContentType;
@@ -260,7 +298,9 @@ begin
   Result := Self;
 end;
 
-constructor TRESTClient.Create(const AServerName: string; AServerPort: Word);
+constructor TRESTClient.Create(const AServerName: string; AServerPort: Word; AIOHandler: TIdIOHandler);
+var
+  Pieces: TArray<string>;
 begin
   inherited Create;
   FPrimaryThread := TThread.CurrentThread;
@@ -272,10 +312,21 @@ begin
   FAccept := 'application/json';
   FContentType := 'application/json; charset=utf-8';
   FRequestHeaders := TStringlist.Create;
+  if AServerName.Contains('://') then
+  begin
+    Pieces := FServerName.Split(['://'], 2, TStringSplitOptions.ExcludeEmpty);
+    FProtocol := Pieces[0];
+    FServerName := Pieces[1];
+  end
+  else
+    FProtocol := 'http';
 
   FHTTP := TIdHTTP.Create(nil);
   FHTTP.ReadTimeout := 20000;
-  SSL(False); //Ezequiel J. Müller
+  if (AIOHandler <> nil) then
+    FHTTP.IOHandler := AIOHandler
+  else
+    SSL(False); //Ezequiel J. Müller
   Compression(False); //Ezequiel J. Müller
   FHTTP.HandleRedirects := True; //Ezequiel J. Müller
   FHTTP.Request.CustomHeaders.FoldLines := false; //Ezequiel J. Müller
@@ -296,20 +347,20 @@ end;
 function TRESTClient.doDELETE(AResource: string;
   AResourceParams: array of string): IRESTResponse;
 var
-  url: string;
+  URL: string;
 begin
-  url := 'http://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+  URL := FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
     EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
     (FQueryStringParams);
 
   if FNextRequestIsAsynch then
   begin
     Result := nil;
-    StartAsynchRequest(httpDELETE, url);
+    StartAsynchRequest(httpDELETE, URL);
   end
   else
   begin
-    Result := SendHTTPCommand(httpDELETE, FAccept, FContentType, url, nil);
+    Result := SendHTTPCommand(httpDELETE, FAccept, FContentType, URL, nil);
     ClearAllParams;
   end;
 end;
@@ -321,7 +372,7 @@ begin
 end;
 
 procedure TRESTClient.StartAsynchRequest(AHTTPMethod: THttpCommand;
-  AUrl: string; ABodyString: String);
+  AUrl: string; ABodyString: string);
 var
   th: TThread;
 begin
@@ -335,52 +386,73 @@ begin
           ABodyString);
         TMonitor.Enter(TObject(R));
         try
-          FAsynchProc(R);
-          ClearAllParams;
+          if FSynchronized then
+            TThread.Synchronize(nil,
+              procedure
+              begin
+                FAsynchProc(R);
+              end)
+          else
+            FAsynchProc(R);
         finally
           TMonitor.Exit(TObject(R));
         end;
       except
         on E: Exception do
         begin
-          FAsynchProcErr(E);
+          if FSynchronized then
+            TThread.Synchronize(nil,
+              procedure
+              begin
+                FAsynchProcErr(E);
+              end)
+          else
+            FAsynchProcErr(E);
         end;
       end;
       if Assigned(FAsynchProcAlways) then
-        FAsynchProcAlways();
+      begin
+        if FSynchronized then
+          TThread.Synchronize(nil,
+            procedure
+            begin
+              FAsynchProcAlways();
+            end)
+        else
+          FAsynchProcAlways();
+      end;
+      ClearAllParams;
     end);
   th.Start;
 end;
 
-function TRESTClient.doGET(AResource: string; AResourceParams: array of string)
-  : IRESTResponse;
+function TRESTClient.doGET(AResource: string; AResourceParams: array of string): IRESTResponse;
 var
-  url: string;
+  URL: string;
 begin
-  url := 'http://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+  URL := FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
     EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
     (FQueryStringParams);
 
   if FNextRequestIsAsynch then
   begin
     Result := nil;
-    StartAsynchRequest(httpGET, url);
+    StartAsynchRequest(httpGET, URL);
   end
   else
   begin
-    Result := SendHTTPCommand(httpGET, FAccept, FContentType, url, nil);
+    Result := SendHTTPCommand(httpGET, FAccept, FContentType, URL, nil);
     ClearAllParams;
   end;
 end;
 
-function TRESTClient.doPOST(AResource: string; AResourceParams: array of string)
-  : IRESTResponse;
+function TRESTClient.doPOST(AResource: string; AResourceParams: array of string): IRESTResponse;
 var
   s: string;
 begin
   try
     Result := SendHTTPCommand(httpPOST, FAccept, FContentType,
-      'http://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+      FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
       EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
       (FQueryStringParams), FBodyParams);
   except
@@ -394,8 +466,6 @@ end;
 
 function TRESTClient.doPOST(AResource: string; AResourceParams: array of string;
 AJSONValue: TJSONValue; AOwnsJSONBody: Boolean): IRESTResponse;
-var
-  url: string;
 begin
   if not Assigned(AJSONValue) then
     raise Exception.Create('AJSONValue is nil');
@@ -407,55 +477,102 @@ begin
   end;
 end;
 
-function TRESTClient.doPOST(AResource: string; AResourceParams: array of string;
-ABodyString: String): IRESTResponse;
+function TRESTClient.doPATCH(AResource: string; AResourceParams: array of string; ABodyString: string): IRESTResponse;
 var
-  url: string;
+  URL: string;
 begin
-  url := 'http://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+  URL := FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
     EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
     (FQueryStringParams);
 
   if FNextRequestIsAsynch then
   begin
     Result := nil;
-    StartAsynchRequest(httpPOST, url, ABodyString);
+    StartAsynchRequest(httpPOST, URL, ABodyString);
   end
   else
   begin
-    Result := SendHTTPCommandWithBody(httpPOST, FAccept, FContentType, url,
+    Result := SendHTTPCommandWithBody(httpPATCH, FAccept, FContentType, URL,
+      ABodyString);
+    ClearAllParams;
+  end;
+end;
+
+function TRESTClient.doPATCH(AResource: string; AResourceParams: array of string; AJSONValue: TJSONValue;
+AOwnsJSONBody: Boolean): IRESTResponse;
+begin
+  if not Assigned(AJSONValue) then
+    raise Exception.Create('AJSONValue is nil');
+  try
+    Result := doPATCH(AResource, AResourceParams, AJSONValue.ToString);
+  finally
+    if AOwnsJSONBody then
+      FreeAndNil(AJSONValue);
+  end;
+end;
+
+function TRESTClient.doPOST(AResource: string; AResourceParams: array of string;
+ABodyString: string): IRESTResponse;
+var
+  URL: string;
+begin
+  URL := FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+    EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
+    (FQueryStringParams);
+
+  if FNextRequestIsAsynch then
+  begin
+    Result := nil;
+    StartAsynchRequest(httpPOST, URL, ABodyString);
+  end
+  else
+  begin
+    Result := SendHTTPCommandWithBody(httpPOST, FAccept, FContentType, URL,
       ABodyString);
     ClearAllParams;
   end;
 end;
 
 function TRESTClient.doPUT(AResource: string; AResourceParams: array of string;
-ABodyString: String): IRESTResponse;
+ABodyString: string): IRESTResponse;
 var
-  url: string;
+  URL: string;
 begin
-  url := 'http://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+  URL := FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
     EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
     (FQueryStringParams);
 
   if FNextRequestIsAsynch then
   begin
     Result := nil;
-    StartAsynchRequest(httpPUT, url, ABodyString);
+    StartAsynchRequest(httpPUT, URL, ABodyString);
   end
   else
   begin
-    Result := SendHTTPCommandWithBody(httpPUT, FAccept, FContentType, url,
+    Result := SendHTTPCommandWithBody(httpPUT, FAccept, FContentType, URL,
       ABodyString);
     ClearAllParams;
   end;
 
+end;
+
+function TRESTClient.DSDelete(const URL, KeyValue: string): IRESTResponse;
+begin
+  Result := doDELETE(URL, [KeyValue]);
+end;
+
+function TRESTClient.DSInsert(const URL: string; DataSet: TDataSet): IRESTResponse;
+begin
+  Result := doPOST(URL, [], DataSet.AsJSONObjectString);
+end;
+
+function TRESTClient.DSUpdate(const URL: string; DataSet: TDataSet; const KeyValue: string): IRESTResponse;
+begin
+  Result := doPUT(URL, [KeyValue], DataSet.AsJSONObjectString);
 end;
 
 function TRESTClient.doPUT(AResource: string; AResourceParams: array of string;
 AJSONValue: TJSONValue; AOwnsJSONBody: Boolean = true): IRESTResponse;
-var
-  url: string;
 begin
   if not Assigned(AJSONValue) then
     raise Exception.Create('AJSONValue is nil');
@@ -472,7 +589,7 @@ function TRESTClient.doPUT(AResource: string; AResourceParams: array of string)
   : IRESTResponse;
 begin
   Result := SendHTTPCommand(httpPUT, FAccept, FContentType,
-    'http://' + FServerName + ':' + inttostr(FServerPort) + AResource +
+    FProtocol + '://' + FServerName + ':' + inttostr(FServerPort) + AResource +
     EncodeResourceParams(AResourceParams) + EncodeQueryStringParams
     (FQueryStringParams), FBodyParams);
   ClearAllParams;
@@ -618,8 +735,6 @@ end;
 function TRESTClient.SendHTTPCommand(const ACommand: THttpCommand;
 const AAccept, AContentType, AUrl: string; ABodyParams: TStrings)
   : IRESTResponse;
-var
-  mp: TIdMultiPartFormDataStream;
 begin
   Result := TRESTResponse.Create;
   FHTTP.Request.RawHeaders.Clear;
@@ -659,7 +774,7 @@ begin
           if Assigned(ABodyParams) and (ABodyParams.Count > 0) then
           begin
             GetRawBody.Size := 0;
-            GetRawBody.WriteString(EncodeQueryStringParams(ABodyParams, False));
+            GetRawBody.WriteString(EncodeQueryStringParams(ABodyParams, false));
           end;
           FHTTP.Put(AUrl, FRawBody, Result.Body);
         end;
@@ -684,7 +799,7 @@ begin
 end;
 
 function TRESTClient.SendHTTPCommandWithBody(const ACommand: THttpCommand;
-const AAccept, AContentType, AUrl: string; ABodyString: String): IRESTResponse;
+const AAccept, AContentType, AUrl: string; ABodyString: string): IRESTResponse;
 begin
   Result := TRESTResponse.Create;
   FHTTP.Request.RawHeaders.Clear;
@@ -708,6 +823,12 @@ begin
           FRawBody.Size := 0;
           FRawBody.WriteString(UTF8Encode(ABodyString));
           FHTTP.Post(AUrl, FRawBody, Result.Body);
+        end;
+
+      httpPATCH:
+        begin
+          raise Exception.Create
+            ('Sorry, PATCH is not supported by the RESTClient because is not supportd by the TidHTTP');
         end;
 
       httpPUT:
@@ -768,7 +889,7 @@ begin
     FHTTP.CookieManager.CookieCollection.Clear;
 end;
 
-function TRESTClient.SSL(const pEnabled: Boolean): TRESTClient;
+function TRESTClient.SSL(const pEnabled: Boolean): TRESTClient; //Ezequiel J. Müller
 begin
   if pEnabled then
   begin
@@ -866,19 +987,19 @@ begin
   inherited;
 end;
 
-function TRESTResponse.GetContentEncoding: String;
+function TRESTResponse.GetContentEncoding: string;
 begin
   Result := FContentEncoding;
 end;
 
-function TRESTResponse.GetContentType: String;
+function TRESTResponse.GetContentType: string;
 begin
   Result := FContentType;
 end;
 
-function TRESTResponse.GetHeader(const Value: String): String;
+function TRESTResponse.GetHeader(const Value: string): string;
 var
-  s: String;
+  s: string;
 begin
   if Assigned(FHeaders) and (FHeaders.Count > 0) then
   begin
@@ -893,6 +1014,23 @@ begin
   else
   begin
     Result := '';
+  end;
+end;
+
+function TRESTResponse.GetHeaderValue(const Name: string): string;
+var
+  s: string;
+  arr: TArray<string>;
+begin
+  Result := '';
+  for s in Self.Headers do
+  begin
+    arr := s.Split([':'], 2);
+    if SameText(arr[0].trim, name) then
+    begin
+      Result := arr[1].trim;
+      Break;
+    end;
   end;
 end;
 
@@ -914,7 +1052,7 @@ end;
 procedure TRESTResponse.SetHeaders(AHeaders: TStrings);
 var
   CT: TArray<string>;
-  C: String;
+  C: string;
 begin
   FHeaders.Assign(AHeaders);
 

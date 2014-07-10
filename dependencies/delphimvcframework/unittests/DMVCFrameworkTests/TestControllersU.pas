@@ -22,6 +22,11 @@ type
   public
     [MVCPath('/')]
     procedure Index(Context: TWebContext);
+
+    [MVCPath('/orders')]
+    [MVCProduces('application/json')]
+    procedure OrdersProduceJSON(Context: TWebContext);
+
     [MVCPath('/orders')]
     procedure Orders(Context: TWebContext);
 
@@ -32,6 +37,10 @@ type
     [MVCHTTPMethod([httpPOST, httpPUT])]
     [MVCPath('/orders/($ordernumber)')]
     procedure UpdateOrderNumber(Context: TWebContext);
+
+    [MVCHTTPMethod([httpPATCH])]
+    [MVCPath('/orders/($ordernumber)')]
+    procedure PatchOrder(Context: TWebContext);
 
     property CalledActions: TStringList read FCalledActions; // only for tests
   end;
@@ -69,6 +78,16 @@ begin
 end;
 
 procedure TSimpleController.Orders(Context: TWebContext);
+begin
+
+end;
+
+procedure TSimpleController.OrdersProduceJSON(Context: TWebContext);
+begin
+
+end;
+
+procedure TSimpleController.PatchOrder(Context: TWebContext);
 begin
 
 end;

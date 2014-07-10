@@ -6,19 +6,30 @@ uses System.SysUtils,
   System.Classes,
   Data.DBXFirebird,
   Data.DB,
-  Data.SqlExpr,
-  Data.DBXJSON;
+  Data.SqlExpr
+{$IFDEF VER270}
+    , System.JSON
+{$ELSE}
+    , Data.DBXJSON
+{$ENDIF}
+    , FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
+  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Comp.Client, FireDAC.Stan.Param,
+  FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Phys.IBBase, FireDAC.Phys.FB,
+  WinesBO;
 
 type
   TWineCellarDataModule = class(TDataModule)
-    wines: TSQLConnection;
-    procedure DataModuleCreate(Sender: TObject);
+    Connection: TFDConnection;
+    qryWines: TFDQuery;
+    updWines: TFDUpdateSQL;
+    FDPhysFBDriverLink1: TFDPhysFBDriverLink;
+    procedure ConnectionBeforeConnect(Sender: TObject);
 
   public
     function GetWineById(id: Integer): TJSONObject;
     function FindWines(Search: string): TJSONArray;
-    function AddWine(Wine: TJSONObject): TJSONObject;
-    function UpdateWine(Wine: TJSONObject): TJSONObject;
+    function AddWine(AWine: TWine): TJSONObject;
+    procedure UpdateWine(AWine: TWine);
     function DeleteWine(id: Integer): TJSONObject;
   end;
 
@@ -29,111 +40,48 @@ implementation
 
 uses System.StrUtils,
   Data.DBXCommon,
-  ObjectsMappers,
-  WinesBO;
+  ObjectsMappers;
 
 { TCellarSM }
 
-function TWineCellarDataModule.AddWine(Wine: TJSONObject): TJSONObject;
-var
-  cmd: TDBXCommand;
-  w: TWine;
-  qry: TSQLQuery;
-const
-  SQL = 'INSERT INTO wine (name, grapes, country, region, "YEAR", description) VALUES (:name, :grapes, :country, :region, :year, :description)';
+function TWineCellarDataModule.AddWine(AWine: TWine): TJSONObject;
 begin
-  w := Mapper.JSONObjectToObject<TWine>(Wine);
-  try
-    qry := Mapper.CreateQuery(wines, SQL);
-    try
-      Mapper.ExecuteSQLQueryNoResult(qry, w);
-    finally
-      qry.free;
-    end;
-  finally
-    w.free;
-  end;
-  Result := TJSONObject.Create;
-end;
-
-procedure TWineCellarDataModule.DataModuleCreate(Sender: TObject);
-begin
-  wines.Params.Values[TDBXPropertyNames.Database] := ExtractFilePath(ParamStr(0)
-    ) + '..\..\WINES.FDB';
-  wines.Open;
+  Mapper.ObjectToFDParameters(updWines.Commands[arInsert].Params, AWine, 'NEW_');
+  updWines.Commands[arInsert].Execute;
 end;
 
 function TWineCellarDataModule.DeleteWine(id: Integer): TJSONObject;
-var
-  cmd: TDBXCommand;
 begin
-  cmd := wines.DBXConnection.CreateCommand;
-  try
-    cmd.Text := 'DELETE FROM WINE WHERE ID = ' + inttostr(id);
-    cmd.ExecuteUpdate;
-    Result := TJSONObject.Create;
-  finally
-    cmd.free;
-  end;
+  updWines.Commands[arDelete].ParamByName('OLD_ID').AsInteger := id;
+  updWines.Commands[arDelete].Execute;
+end;
+
+procedure TWineCellarDataModule.ConnectionBeforeConnect(Sender: TObject);
+begin
+  Connection.Params.Values['Database'] := ExtractFilePath(ParamStr(0)
+    ) + '..\..\WINES.FDB';
 end;
 
 function TWineCellarDataModule.FindWines(Search: string): TJSONArray;
-var
-  obj: TJSONObject;
-  cmd: TDBXCommand;
 begin
-  cmd := wines.DBXConnection.CreateCommand;
-  try
-    if Search.IsEmpty then
-      cmd.Text := 'SELECT * FROM wine'
-    else
-      cmd.Text := 'SELECT * FROM wine where NAME CONTAINING ''' + Search + '''';
-    cmd.Text := cmd.Text + ' order by name';
-    Result := TJSONArray.Create;
-    Mapper.ReaderToJSONArray(cmd.ExecuteQuery, Result);
-  finally
-    cmd.free;
-  end;
+  if Search.IsEmpty then
+    qryWines.Open('SELECT * FROM wine')
+  else
+    qryWines.Open('SELECT * FROM wine where NAME CONTAINING ?', [Search]);
+  Result := qryWines.AsJSONArray;
 end;
 
 function TWineCellarDataModule.GetWineById(id: Integer): TJSONObject;
-var
-  cmd: TDBXCommand;
-  rdr: TDBXReader;
 begin
-  Result := nil;
-  cmd := wines.DBXConnection.CreateCommand;
-  try
-    cmd.Text := 'SELECT * FROM wine where id = ' + inttostr(id);
-    Result := TJSONObject.Create;
-    rdr := cmd.ExecuteQuery;
-    if rdr.Next then
-      Mapper.ReaderToJSONObject(rdr, Result);
-  finally
-    cmd.free;
-  end;
+  qryWines.Open('SELECT * FROM wine where id = ?', [id]);
+  Result := qryWines.AsJSONObject;
 end;
 
-function TWineCellarDataModule.UpdateWine(Wine: TJSONObject): TJSONObject;
-var
-  cmd: TDBXCommand;
-  w: TWine;
-  qry: TSQLQuery;
-const
-  SQL = 'UPDATE WINE SET name = :name, grapes = :grapes, country = :country, region = :region, "YEAR" = :year, description = :description WHERE ID = :id';
+procedure TWineCellarDataModule.UpdateWine(AWine: TWine);
 begin
-  w := Mapper.JSONObjectToObject<TWine>(Wine);
-  try
-    qry := Mapper.CreateQuery(wines, SQL);
-    try
-      Mapper.ExecuteSQLQueryNoResult(qry, w);
-    finally
-      qry.free;
-    end;
-  finally
-    w.free;
-  end;
-  Result := TJSONObject.Create;
+  Mapper.ObjectToFDParameters(updWines.Commands[arUpdate].Params, AWine, 'NEW_');
+  updWines.Commands[arUpdate].Params.ParamByName('OLD_ID').AsInteger := AWine.id;
+  updWines.Commands[arUpdate].Execute;
 end;
 
 end.

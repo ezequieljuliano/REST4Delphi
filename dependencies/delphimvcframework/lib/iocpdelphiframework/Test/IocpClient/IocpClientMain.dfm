@@ -378,7 +378,7 @@ object fmIocpClient: TfmIocpClient
       Left = 313
       Top = 26
       Width = 158
-      Height = 21
+      Height = 25
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -398,7 +398,7 @@ object fmIocpClient: TfmIocpClient
       Left = 146
       Top = 26
       Width = 159
-      Height = 21
+      Height = 25
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -417,7 +417,7 @@ object fmIocpClient: TfmIocpClient
       Left = 146
       Top = 78
       Width = 159
-      Height = 21
+      Height = 25
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -437,7 +437,7 @@ object fmIocpClient: TfmIocpClient
       Left = 313
       Top = 78
       Width = 158
-      Height = 21
+      Height = 25
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -471,7 +471,7 @@ object fmIocpClient: TfmIocpClient
       Left = 146
       Top = 131
       Width = 159
-      Height = 21
+      Height = 25
       Hint = '0'#34920#31034#19981#38480#21046
       Margins.Left = 4
       Margins.Top = 4
@@ -494,7 +494,7 @@ object fmIocpClient: TfmIocpClient
       Left = 313
       Top = 131
       Width = 158
-      Height = 21
+      Height = 25
       Hint = '0'#34920#31034#19981#38480#21046
       Margins.Left = 4
       Margins.Top = 4

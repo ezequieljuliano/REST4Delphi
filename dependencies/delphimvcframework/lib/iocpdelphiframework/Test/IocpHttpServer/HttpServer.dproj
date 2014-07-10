@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{8018F70B-DB6C-4443-AC2F-C0C80415173C}</ProjectGuid>
-        <ProjectVersion>15.1</ProjectVersion>
+        <ProjectVersion>15.4</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <MainSource>HttpServer.dpr</MainSource>
         <Base>True</Base>
@@ -46,6 +46,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <SanitizedProjectName>HttpServer</SanitizedProjectName>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <Manifest_File>None</Manifest_File>
         <VerInfo_Locale>2052</VerInfo_Locale>

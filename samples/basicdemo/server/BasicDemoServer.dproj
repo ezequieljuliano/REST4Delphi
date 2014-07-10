@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{2C428AD4-1A38-4F13-8B89-4ED77C5E3793}</ProjectGuid>
-        <ProjectVersion>15.1</ProjectVersion>
+        <ProjectVersion>15.4</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <MainSource>BasicDemoServer.dpr</MainSource>
         <Base>True</Base>
@@ -40,6 +40,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <SanitizedProjectName>BasicDemoServer</SanitizedProjectName>
         <DCC_UnitSearchPath>..\..\..\dependencies\delphimvcframework\sources;..\..\..\dependencies\delphimvcframework\lib\delphistompclient;..\..\..\dependencies\delphimvcframework\lib\delphistompclient\lib\synapse;..\..\..\dependencies\delphimvcframework\lib\iocpdelphiframework\Base;..\..\..\dependencies\delphimvcframework\lib\iocpdelphiframework\Core;..\..\..\dependencies\delphimvcframework\lib\iocpdelphiframework\Extensions;..\..\..\dependencies\delphimvcframework\lib\luadelphibinding;..\..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcpOutput>.\$(Platform)\$(Config)\dcp</DCC_DcpOutput>
         <DCC_BplOutput>.\$(Platform)\$(Config)\pkg</DCC_BplOutput>

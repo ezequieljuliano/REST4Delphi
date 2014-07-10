@@ -1,189 +1,166 @@
 unit Iocp.TimerQueue;
 
-{基于Win32系统的时钟队列
-主要用于检测IOCP连接是否超时
-}
+{基于Win32系统的时钟队列}
 
 interface
 
 uses
-  Windows, Classes, SysUtils, SyncObjs, System.Generics.Collections, Iocp.Logger;
+  System.Classes, System.SysUtils, System.SyncObjs, System.Generics.Collections,
+  Winapi.Windows;
 
 type
-  TIocpTimerQueueTimer = class;
-  TIocpTimerQueueTimerList = TList<TIocpTimerQueueTimer>;
-  TIocpTimerQueue = class
-  private
-    FRefCount: Integer;
-    FTimerQueueHandle: THandle;
-    FTimerList: TIocpTimerQueueTimerList;
-    FLocker: TCriticalSection;
-  protected
-  public
-    constructor Create; virtual;
-    destructor Destroy; override;
+  TTimerProc = reference to procedure;
+  TTimerMethod = procedure of object;
 
-    function AddRef: Integer;
-    function Release: Boolean;
-
-    property Handle: THandle read FTimerQueueHandle;
-    property RefCount: Integer read FRefCount;
+  PTimer = ^TTimer;
+  TTimer = record
+    Handle: THandle;
+    Interval: Cardinal;
+    Proc: TTimerProc;
+    Method: TTimerMethod;
   end;
 
-  TIocpTimerQueueTimer = class
+  TTimerQueue = class
+  public type
+    TTimerQueueTimerList = class(TList<PTimer>)
+    protected
+      procedure Notify(const Item: PTimer; Action: TCollectionNotification); override;
+    end;
+  private class var
+    FTimerQueueHandle: THandle;
+    FTimerList: TTimerQueueTimerList;
+    FLocker: TCriticalSection;
   private
-    FTimerQueue: TIocpTimerQueue;
-    FTimerHandle: THandle;
-    FInterval: DWORD;
-    FRefCount: Integer;
-    FOnTimer: TNotifyEvent;
-    FOnDestroy: TNotifyEvent;
+    class constructor Create;
+    class destructor Destroy;
 
-    procedure SetInterval(const Value: DWORD);
-  protected
-    procedure Execute; virtual;
+    class function NewTimer(Timer: PTimer): PTimer; overload;
   public
-    constructor Create(TimerQueue: TIocpTimerQueue; Interval: DWORD; OnCreate: TNotifyEvent); virtual;
-    destructor Destroy; override;
+    class function NewTimer(Interval: Cardinal; Proc: TTimerProc): PTimer; overload;
+    class function NewTimer(Interval: Cardinal; Method: TTimerMethod): PTimer; overload;
+    class procedure RemoveTimer(Timer: PTimer);
+    class procedure SetInterval(Timer: PTimer; Interval: Cardinal);
 
-    function AddRef: Integer;
-    function Release: Boolean;
-
-    property Interval: DWORD read FInterval write SetInterval;
-    property OnTimer: TNotifyEvent read FOnTimer write FOnTimer;
-    property OnDestroy: TNotifyEvent read FOnDestroy write FOnDestroy;
+    class property Handle: THandle read FTimerQueueHandle;
   end;
 
 implementation
 
-procedure WaitOrTimerCallback(Timer: TIocpTimerQueueTimer; TimerOrWaitFired: ByteBool); stdcall;
+procedure WaitOrTimerCallback(Timer: PTimer; TimerOrWaitFired: ByteBool); stdcall;
 begin
+  if not Assigned(Timer) then Exit;
+
   try
-    Timer.Execute;
+    if Assigned(Timer.Proc) then
+      Timer.Proc()
+    else if Assigned(Timer.Method) then
+      Timer.Method();
   except
   end;
 end;
 
-{ TIocpTimerQueue }
+{ TTimerQueue.TTimerQueueTimerList }
 
-constructor TIocpTimerQueue.Create;
+procedure TTimerQueue.TTimerQueueTimerList.Notify(const Item: PTimer;
+  Action: TCollectionNotification);
 begin
-  FTimerQueueHandle := CreateTimerQueue();
-  FTimerList := TIocpTimerQueueTimerList.Create;
-  FLocker := TCriticalSection.Create;
-  FRefCount := 1;
+  inherited Notify(Item, Action);
+  if (Action = cnRemoved) and Assigned(Item) then
+    System.Dispose(Item);
 end;
 
-destructor TIocpTimerQueue.Destroy;
-var
-  Timer: TIocpTimerQueueTimer;
-  i: Integer;
+{ TTimerQueue }
+
+class constructor TTimerQueue.Create;
+begin
+  FTimerQueueHandle := CreateTimerQueue();
+  FTimerList := TTimerQueueTimerList.Create;
+  FLocker := TCriticalSection.Create;
+end;
+
+class destructor TTimerQueue.Destroy;
 begin
   DeleteTimerQueueEx(FTimerQueueHandle, 0);
   FTimerQueueHandle := INVALID_HANDLE_VALUE;
 
   try
     FLocker.Enter;
-    // thanks Hezihang2012
-    i := 0;
-    while (i < FTimerList.Count) do
-    begin
-      Timer := FTimerList[i];
-      Timer.Release;
-      if (Timer = FTimerList[i]) then Inc(i);
-    end;
+    FTimerList.Clear;
   finally
     FLocker.Leave;
   end;
 
   FTimerList.Free;
   FLocker.Free;
-
-  inherited Destroy;
 end;
 
-function TIocpTimerQueue.AddRef: Integer;
+class function TTimerQueue.NewTimer(Timer: PTimer): PTimer;
 begin
-  Result := InterlockedIncrement(FRefCount);
-end;
+  if not Assigned(Timer) then Exit(nil);
 
-function TIocpTimerQueue.Release: Boolean;
-begin
-  Result := (InterlockedDecrement(FRefCount) = 0);
-  if not Result then Exit;
-
-  Free;
-end;
-
-{ TIocpTimerQueueTimer }
-
-constructor TIocpTimerQueueTimer.Create(TimerQueue: TIocpTimerQueue; Interval: DWORD; OnCreate: TNotifyEvent);
-begin
-  FTimerQueue := TimerQueue;
-  FInterval := Interval;
-  FRefCount := 1;
-
-  // 参数DueTime设置为100，表示100毫秒后才启动Timer
-  // 这样做是为了让Timer等待对象创建完成，否则可能会出现Timer中访问对象，但是对象尚未创建成功
-  if not CreateTimerQueueTimer(FTimerHandle, FTimerQueue.Handle, @WaitOrTimerCallback, Pointer(Self), 100, FInterval, 0) then
+  if CreateTimerQueueTimer(Timer.Handle, FTimerQueueHandle, @WaitOrTimerCallback, Timer, 100, Timer.Interval, 0) then
   begin
-    raise Exception.Create('CreateTimerQueueTimer failed');
+    FLocker.Enter;
+    FTimerList.Add(Timer);
+    FLocker.Leave;
+    Result := Timer;
+  end else
+  begin
+    System.Dispose(Timer);
+    Result := nil;
   end;
+end;
 
+class function TTimerQueue.NewTimer(Interval: Cardinal;
+  Proc: TTimerProc): PTimer;
+var
+  LTimer: PTimer;
+begin
+  System.New(LTimer);
+  LTimer.Interval := Interval;
+  LTimer.Proc := Proc;
+  LTimer.Method := nil;
+  Result := NewTimer(LTimer);
+end;
+
+class function TTimerQueue.NewTimer(Interval: Cardinal;
+  Method: TTimerMethod): PTimer;
+var
+  LTimer: PTimer;
+begin
+  System.New(LTimer);
+  LTimer.Interval := Interval;
+  LTimer.Proc := nil;
+  LTimer.Method := Method;
+  Result := NewTimer(LTimer);
+end;
+
+class procedure TTimerQueue.RemoveTimer(Timer: PTimer);
+begin
+  if not Assigned(Timer) then Exit;
+  
+  FLocker.Enter;
   try
-    FTimerQueue.AddRef;
-    FTimerQueue.FLocker.Enter;
-    FTimerQueue.FTimerList.Add(Self);
+    DeleteTimerQueueTimer(FTimerQueueHandle, Timer.Handle, 0);
+    FTimerList.Remove(Timer);
   finally
-    FTimerQueue.FLocker.Leave;
+    FLocker.Leave;
   end;
-
-  if Assigned(OnCreate) then
-    OnCreate(Self);
 end;
 
-destructor TIocpTimerQueueTimer.Destroy;
+class procedure TTimerQueue.SetInterval(Timer: PTimer;
+  Interval: Cardinal);
 begin
-  if Assigned(FOnDestroy) then
-    FOnDestroy(Self);
+  if not Assigned(Timer) then Exit;
 
-  if (FTimerQueue.Handle <> INVALID_HANDLE_VALUE) then
-    DeleteTimerQueueTimer(FTimerQueue.Handle, FTimerHandle, 0);
-
+  FLocker.Enter;
   try
-    FTimerQueue.FLocker.Enter;
-    FTimerQueue.FTimerList.Remove(Self);
+    ChangeTimerQueueTimer(FTimerQueueHandle, Timer.Handle, 0, Interval);
+    Timer.Interval := Interval;
   finally
-    FTimerQueue.FLocker.Leave;
-    FTimerQueue.Release;
+    FLocker.Leave;
   end;
-
-  inherited Destroy;
-end;
-
-function TIocpTimerQueueTimer.AddRef: Integer;
-begin
-  Result := InterlockedIncrement(FRefCount);
-end;
-
-function TIocpTimerQueueTimer.Release: Boolean;
-begin
-  Result := (InterlockedDecrement(FRefCount) = 0);
-  if not Result then Exit;
-
-  Free;
-end;
-
-procedure TIocpTimerQueueTimer.Execute;
-begin
-  if Assigned(FOnTimer) then
-    FOnTimer(Self);
-end;
-
-procedure TIocpTimerQueueTimer.SetInterval(const Value: DWORD);
-begin
-  FInterval := Value;
-  ChangeTimerQueueTimer(FTimerQueue.Handle, FTimerHandle, 0, FInterval)
 end;
 
 end.
+

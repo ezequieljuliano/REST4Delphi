@@ -8,3 +8,4 @@
 /samples/basicdemo/server/Win32/Debug
 
 /dependencies/delphimvcframework/sources/__history/*.~1~
+/dependencies/delphimvcframework/sources/__history

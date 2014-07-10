@@ -135,7 +135,6 @@ var
 begin
   if (S = '') then Exit('');
 
-
   if Assigned(Encodeing) then
     LEncodeing := Encodeing
   else

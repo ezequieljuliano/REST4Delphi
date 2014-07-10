@@ -3,7 +3,8 @@ unit BOs;
 interface
 
 uses
-  FrameworkTestsU, system.TimeSpan, system.SysUtils;
+  FrameworkTestsU, system.TimeSpan, system.SysUtils, generics.collections,
+  ObjectsMappers;
 
 type
   TMyObject = class
@@ -21,6 +22,7 @@ type
     FPropInteger: Integer;
     FPropTimeStamp: TTimeStamp;
     FPropTime: TTime;
+    FPropCurrency: Currency;
     procedure SetPropAnsiString(const Value: AnsiString);
     procedure SetPropString(const Value: string);
     procedure SetPropInt64(const Value: Int64);
@@ -34,6 +36,7 @@ type
     procedure SetPropInteger(const Value: Integer);
     procedure SetPropTimeStamp(const Value: TTimeStamp);
     procedure SetPropTime(const Value: TTime);
+    procedure SetPropCurrency(const Value: Currency);
   public
     function Equals(Obj: TMyObject): boolean;
     property PropString: string read FPropString write SetPropString;
@@ -49,14 +52,67 @@ type
     property PropTime: TTime read FPropTime write SetPropTime;
     property PropDateTime: TDateTime read FPropDateTime write SetPropDateTime;
     property PropTimeStamp: TTimeStamp read FPropTimeStamp write SetPropTimeStamp;
+    property PropCurrency: Currency read FPropCurrency write SetPropCurrency;
+  end;
+
+  TMyChildObject = class
+  private
+    FMyChildProperty1: string;
+    procedure SetMyChildProperty1(const Value: string);
+  public
+    property MyChildProperty1: string read FMyChildProperty1 write SetMyChildProperty1;
+  end;
+
+  [MapperListOf(TMyChildObject)]
+  TMyChildObjectList = class(TObjectList<TMyChildObject>)
+  end;
+
+  TMyComplexObject = class
+  private
+    FProp1: string;
+    FChildObjectList: TMyChildObjectList;
+    FChildObject: TMyChildObject;
+    procedure SetChildObject(const Value: TMyChildObject);
+    procedure SetChildObjectList(const Value: TMyChildObjectList);
+    procedure SetProp1(const Value: string);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function Equals(Obj: TObject): boolean; override;
+
+    property Prop1: string read FProp1 write SetProp1;
+    property ChildObject: TMyChildObject read FChildObject write SetChildObject;
+    property ChildObjectList: TMyChildObjectList read FChildObjectList write SetChildObjectList;
   end;
 
 function GetMyObject: TMyObject;
+function GetMyComplexObject: TMyComplexObject;
 
 implementation
 
 uses
   system.DateUtils;
+
+function GetMyComplexObject: TMyComplexObject;
+var
+  co: TMyChildObject;
+begin
+  Result := TMyComplexObject.Create;
+  Result.Prop1 := 'property1';
+  Result.ChildObject.MyChildProperty1 := 'MySingleChildProperty1';
+  co := TMyChildObject.Create;
+  co.MyChildProperty1 := 'MyChildProperty1';
+  Result.ChildObjectList.Add(co);
+  co := TMyChildObject.Create;
+  co.MyChildProperty1 := 'MyChildProperty2';
+  Result.ChildObjectList.Add(co);
+  co := TMyChildObject.Create;
+  co.MyChildProperty1 := 'MyChildProperty3';
+  Result.ChildObjectList.Add(co);
+  co := TMyChildObject.Create;
+  co.MyChildProperty1 := 'MyChildProperty4';
+  Result.ChildObjectList.Add(co);
+end;
 
 function GetMyObject: TMyObject;
 begin
@@ -69,6 +125,7 @@ begin
   Result.PropUInt64 := 1234567890;
   Result.PropUInt16 := 12345;
   Result.PropInt16 := -12345;
+  Result.PropCurrency := 1234.5678;
   Result.PropBoolean := true;
   Result.PropDate := EncodeDate(2010, 10, 20);
   Result.PropTime := EncodeTime(10, 20, 30, 40);
@@ -89,6 +146,7 @@ begin
   Result := Result and (Self.PropInt16 = Obj.PropInt16);
   Result := Result and (Self.PropBoolean = Obj.PropBoolean);
   Result := Result and (Self.PropDate = Obj.PropDate);
+  Result := Result and (Self.PropCurrency = Obj.PropCurrency);
   Result := Result and (SecondsBetween(Self.PropTime, Obj.PropTime) = 0);
   Result := Result and (SecondsBetween(Self.PropDateTime, Obj.PropDateTime) = 0);
   Result := Result and (Self.PropTimeStamp.Date = Obj.PropTimeStamp.Date) and
@@ -103,6 +161,11 @@ end;
 procedure TMyObject.SetPropBoolean(const Value: boolean);
 begin
   FPropBoolean := Value;
+end;
+
+procedure TMyObject.SetPropCurrency(const Value: Currency);
+begin
+  FPropCurrency := Value;
 end;
 
 procedure TMyObject.SetPropDate(const Value: TDate);
@@ -158,6 +221,59 @@ end;
 procedure TMyObject.SetPropUInt64(const Value: UInt64);
 begin
   FPropUInt64 := Value;
+end;
+
+{ TMyComplexObject }
+
+constructor TMyComplexObject.Create;
+begin
+  inherited;
+  FChildObjectList := TMyChildObjectList.Create(true);
+  FChildObject := TMyChildObject.Create;
+end;
+
+destructor TMyComplexObject.Destroy;
+begin
+  FChildObjectList.Free;
+  FChildObject.Free;
+  inherited;
+end;
+
+function TMyComplexObject.Equals(Obj: TObject): boolean;
+var
+  co: TMyComplexObject;
+begin
+  co := Obj as TMyComplexObject;
+
+  Result := co.Prop1 = Self.Prop1;
+  Result := Result and (co.ChildObject.MyChildProperty1 = Self.ChildObject.MyChildProperty1);
+  Result := Result and (co.ChildObjectList.Count = Self.ChildObjectList.Count);
+  Result := Result and (co.ChildObjectList[0].MyChildProperty1 = Self.ChildObjectList[0].MyChildProperty1);
+  Result := Result and (co.ChildObjectList[1].MyChildProperty1 = Self.ChildObjectList[1].MyChildProperty1);
+  Result := Result and (co.ChildObjectList[2].MyChildProperty1 = Self.ChildObjectList[2].MyChildProperty1);
+  Result := Result and (co.ChildObjectList[3].MyChildProperty1 = Self.ChildObjectList[3].MyChildProperty1);
+end;
+
+procedure TMyComplexObject.SetChildObject(const Value: TMyChildObject);
+begin
+  FChildObject := Value;
+end;
+
+procedure TMyComplexObject.SetChildObjectList(const Value: TMyChildObjectList);
+begin
+  FChildObjectList := Value;
+end;
+
+procedure TMyComplexObject.SetProp1(const Value: string);
+begin
+  FProp1 := Value;
+end;
+
+{ TMyChildObject }
+
+procedure TMyChildObject.SetMyChildProperty1(const Value: string);
+begin
+  FMyChildProperty1 := Value;
 end;
 
 end.

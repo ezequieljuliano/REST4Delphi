@@ -83,26 +83,25 @@ implementation
 
 { TTestIocpClient }
 
-const
-  KBYTES = Int64(1024);
-  MBYTES = KBYTES * 1024;
-  GBYTES = MBYTES * 1024;
-  TBYTES = GBYTES * 1024;
-
 function BytesToStr(Bytes: Int64): string;
+const
+  KB = Int64(1024);
+  MB = KB * 1024;
+  GB = MB * 1024;
+  TB = GB * 1024;
 begin
   if (Bytes = 0) then
     Result := ''
-  else if (Bytes < KBYTES) then
+  else if (Bytes < KB) then
     Result := Format('%dB', [Bytes])
-  else if (Bytes < MBYTES) then
-    Result := Format('%dK ', [Bytes div KBYTES]) + BytesToStr(Bytes mod KBYTES)
-  else if (Bytes < GBYTES) then
-    Result := Format('%dM ', [Bytes div MBYTES]) + BytesToStr(Bytes mod MBYTES)
-  else if (Bytes < TBYTES) then
-    Result := Format('%dG ', [Bytes div GBYTES]) + BytesToStr(Bytes mod GBYTES)
+  else if (Bytes < MB) then
+    Result := FormatFloat('0.##K', Bytes / KB)
+  else if (Bytes < GB) then
+    Result := FormatFloat('0.##M', Bytes / MB)
+  else if (Bytes < TB) then
+    Result := FormatFloat('0.##G', Bytes / GB)
   else
-    Result := Format('%dT ', [Bytes div TBYTES]) + BytesToStr(Bytes mod TBYTES);
+    Result := FormatFloat('0.##T', Bytes / TB);
 end;
 
 procedure TTestIocpClient.TriggerClientConnected(Client: TIocpSocketConnection);

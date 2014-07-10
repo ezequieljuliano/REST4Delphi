@@ -18,7 +18,7 @@ type
     FActive: Boolean;
     procedure SetActive(const Value: Boolean);
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent; IoThreadsNumber: Integer); override;
     destructor Destroy; override;
 
     function Start: Boolean;
@@ -43,9 +43,10 @@ end;
 
 { TSimpleIocpTcpServer }
 
-constructor TSimpleIocpTcpServer.Create(AOwner: TComponent);
+constructor TSimpleIocpTcpServer.Create(AOwner: TComponent;
+  IoThreadsNumber: Integer);
 begin
-  inherited Create(AOwner);
+  inherited Create(AOwner, IoThreadsNumber);
   FListened := False;
 
   FAddr := '';
@@ -71,14 +72,20 @@ begin
 end;
 
 function TSimpleIocpTcpServer.Start: Boolean;
+var
+  LPort: Word;
 begin
   if FListened then Exit(True);
 
   StartupWorkers;
-  FListened := inherited Listen(FAddr, FPort, FInitAcceptNum);
+  LPort := inherited Listen(FAddr, FPort, FInitAcceptNum);
+  FListened := (LPort <> 0);
   Result := FListened;
   if Result then
+  begin
     FStartTick := GetTickCount;
+    FPort := LPort;
+  end;
 end;
 
 function TSimpleIocpTcpServer.Stop: Boolean;

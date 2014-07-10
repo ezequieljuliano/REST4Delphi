@@ -22,6 +22,6 @@
     <Transaction>2014/03/10 08:30:19.000.333,=D:\GitHub\REST4Delphi\unittest\Unit1.pas</Transaction>
     <Transaction>2014/03/10 08:31:09.000.187,D:\GitHub\REST4Delphi\unittest\REST4D.Tests.TempWebModule.pas=D:\GitHub\REST4Delphi\unittest\Unit1.pas</Transaction>
     <Transaction>2014/03/10 08:31:09.000.187,D:\GitHub\REST4Delphi\unittest\REST4D.Tests.TempWebModule.dfm=D:\GitHub\REST4Delphi\unittest\Unit1.dfm</Transaction>
-    <Transaction>2014/05/02 16:44:12.663,\\VBOXSVR\d_drive\GitHub\REST4Delphi\unittest\REST4DTests.dproj=\\VBOXSVR\d_drive\GitHub\REST4Delphi\unittest\REST4D.Tests.dproj</Transaction>
+    <Transaction>2014/05/02 16:44:12.000.663,\\VBOXSVR\d_drive\GitHub\REST4Delphi\unittest\REST4DTests.dproj=\\VBOXSVR\d_drive\GitHub\REST4Delphi\unittest\REST4D.Tests.dproj</Transaction>
   </Transactions>
 </BorlandProject>

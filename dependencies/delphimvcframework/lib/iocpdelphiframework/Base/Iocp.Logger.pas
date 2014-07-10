@@ -48,7 +48,9 @@ type
     FConsoleHandle: THandle;
     FShowConsole: Boolean;
     FConsoleLocker: TCriticalSection;
+    FFilters: TLogTypeSets;
     procedure SetShowConsole(const Value: Boolean);
+    procedure SetFilters(const Value: TLogTypeSets);
   protected
     function GetLogFileName(LogType: TLogType; Date: TDateTime): string;
     procedure AppendStrToLogFile(const S: UnicodeString; LogType: TLogType);
@@ -65,6 +67,7 @@ type
     procedure AppendLog(const Fmt: UnicodeString; const Args: array of const; LogType: TLogType = ltNormal; CRLF: string = ';'); overload;
 
     property ShowConsole: Boolean read FShowConsole write SetShowConsole;
+    property Filters: TLogTypeSets read FFilters write SetFilters;
   end;
 
 procedure ShowConsoleLog(OnOff: Boolean);
@@ -82,6 +85,7 @@ var
   i: TLogType;
 begin
   FRefCount := 1;
+  FFilters := [ltNormal, ltWarning, ltError, ltException];
 
   for i := Low(TLogType) to High(TLogType) do
   begin
@@ -148,6 +152,11 @@ begin
     Free;
 end;
 
+procedure TIocpLogger.SetFilters(const Value: TLogTypeSets);
+begin
+  FFilters := Value;
+end;
+
 procedure TIocpLogger.SetShowConsole(const Value: Boolean);
 var
   ConSize: TCoord;
@@ -191,6 +200,7 @@ var
   LogText: UnicodeString;
 begin
   if (AddRef = 1) then Exit;
+  if not (LogType in FFilters) then Exit;
 
   try
     if (CRLF <> '') then
@@ -271,11 +281,10 @@ begin
         ForceDirectories(LogDir);
         FFileWriters[LogType] := TCacheFileStream.Create(LogFile);
       end;
+      FFileWriters[LogType].AppendStr(S);
     finally
       FFileLocker[LogType].Leave;
     end;
-
-    FFileWriters[LogType].AppendStr(S);
   finally
     Release;
   end;

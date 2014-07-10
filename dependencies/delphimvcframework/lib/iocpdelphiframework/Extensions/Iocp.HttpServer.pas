@@ -6,7 +6,7 @@ interface
 
 uses
   Windows, Messages, Classes, SysUtils, StrUtils, SyncObjs, Math, IoUtils,
-  System.Generics.Collections,
+  System.Generics.Collections, System.RegularExpressions, System.Masks,
   Iocp.TcpSocket, Iocp.SimpleServer, Iocp.ThreadPool, Iocp.HttpUtils, Iocp.Buffer, Iocp.Logger
   {$ifdef __IOCP_SSL__},Iocp.SSLSocket{$endif};
 
@@ -216,6 +216,7 @@ type
     procedure ParseRecvData(Client: TIocpHttpConnection; buf: Pointer; len: Integer);
     function GetRootDir: string;
     function HandlerIndex(const Method, URI: string): Integer;
+    function UriIsMatch(const URI, Pattern: string): Boolean;
   protected
     {$ifdef __IOCP_HTTP_SERVER_LOGIC_THREAD_POOL__}
     procedure StartupWorkers; override;
@@ -230,17 +231,17 @@ type
     // DoOnRequest 将会在线程池中被调用，可以在这个函数里处理用户自定义的回执数据
     procedure DoOnRequest(Client: TIocpHttpConnection); virtual;
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent; IoThreadsNumber: Integer); override;
     destructor Destroy; override;
 
     ///	<summary>
     ///	  注册请求处理函数
     ///	</summary>
     ///	<param name="Method">
-    ///	  请求方法, GET/POST/PUT等, * 表示处理全部请求方法
+    ///	  请求方法, GET/POST/PUT等, 支持通配符和正则表达式, * 表示处理全部请求方法
     ///	</param>
     ///	<param name="URI">
-    ///	  请求路径, * 表示处理全部请求路径
+    ///	  请求路径, 支持通配符和正则表达式, * 表示处理全部请求路径
     ///	</param>
     ///	<param name="HandlerProc">
     ///	  处理函数
@@ -723,12 +724,13 @@ end;
 
 { TIocpHttpServer }
 
-constructor TIocpHttpServer.Create(AOwner: TComponent);
+constructor TIocpHttpServer.Create(AOwner: TComponent;
+  IoThreadsNumber: Integer);
 begin
   FHandlers := TIocpHttpHandlers.Create;
   FHandlersLock := TCriticalSection.Create;
 
-  inherited Create(AOwner);
+  inherited Create(AOwner, IoThreadsNumber);
 
   InitAcceptNum := IOCP_HTTP_INIT_ACCEPT_NUM;
   ConnectionClass := TIocpHttpConnection;
@@ -792,8 +794,10 @@ begin
   try
     for LHandler in FHandlers do
     begin
-      if (SameText(LHandler.Method, Client.Method) or (LHandler.Method = '*')) and
-         (SameText(LHandler.URI, Client.Path) or (LHandler.URI = '*')) then
+//      if (SameText(LHandler.Method, Client.Method) or (LHandler.Method = '*')) and
+//         (SameText(LHandler.URI, Client.Path) or (LHandler.URI = '*')) then
+      if UriIsMatch(Client.Method, LHandler.Method) and
+         UriIsMatch(Client.Path, LHandler.URI) then
       begin
         if Assigned(LHandler.HandlerProc) then
           LHandler.HandlerProc(Client)
@@ -991,6 +995,11 @@ begin
   if (I >= 0) then
     FHandlers.Delete(I);
   FHandlersLock.Leave;
+end;
+
+function TIocpHttpServer.UriIsMatch(const URI, Pattern: string): Boolean;
+begin
+  Result := MatchesMask(URI, Pattern) or TRegEx.IsMatch(URI, Pattern);
 end;
 
 procedure TIocpHttpServer.UnregisterAllHandlers;

@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{85BF30D8-9A3C-4B31-8DD5-963164348C7E}</ProjectGuid>
-        <ProjectVersion>15.1</ProjectVersion>
+        <ProjectVersion>15.4</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
@@ -45,6 +45,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <SanitizedProjectName>REST4DTests</SanitizedProjectName>
         <DCC_BplOutput>.\$(Platform)\$(Config)\pkg</DCC_BplOutput>
         <Manifest_File>None</Manifest_File>
         <DCC_DcpOutput>.\$(Platform)\$(Config)\dcp</DCC_DcpOutput>

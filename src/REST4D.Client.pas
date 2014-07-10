@@ -8,7 +8,13 @@ uses
   ObjectsMappers,
   System.Generics.Collections,
   System.SysUtils,
+{$IF Defined(VER270)}
+  System.JSON,
+{$ELSE}
   Data.DBXJSON,
+  Data.SqlExpr,
+  DBXCommon,
+{$IFEND}
   IdURI;
 
 type

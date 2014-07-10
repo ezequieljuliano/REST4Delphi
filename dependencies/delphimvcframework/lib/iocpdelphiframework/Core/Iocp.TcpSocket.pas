@@ -23,11 +23,8 @@ ZY. 2012.04.19
 // 这会一定程度降低发送效率，但是能提高响应速度
 //{$define __TCP_NODELAY__}
 
-// ** 下面两个0拷贝参数不要打开，经过实际测试发现打开后反而速度会严重下降
-// ** 看来底层的缓存机制还是很高效的
-
 // 发送缓存0拷贝，发送数据时直接使用程序设定的缓存，不用拷贝到Socket底层缓存
-//{$define __TCP_SNDBUF_ZERO_COPY__}
+{$define __TCP_SNDBUF_ZERO_COPY__}
 
 // 接收缓存0拷贝，接收数据时直接使用程序设定的缓存，不用从Socket底层缓存拷贝
 //{$define __TCP_RCVBUF_ZERO_COPY__}
@@ -40,7 +37,11 @@ interface
 uses
   Windows, Messages, Classes, SysUtils, SyncObjs, Math, System.Generics.Collections,
   Iocp.Winsock2, Iocp.Wship6, Iocp.ApiFix, Iocp.ThreadPool, Iocp.MemoryPool,
-  Iocp.ObjectPool, Iocp.Buffer, Iocp.Queue, Iocp.TimerQueue, Iocp.Logger, Iocp.Utils;
+  Iocp.ObjectPool, Iocp.Queue,
+  {$ifdef __TIME_OUT_TIMER__}
+  Iocp.TimerQueue,
+  {$endif}
+  Iocp.Logger, Iocp.Utils;
 
 const
   SHUTDOWN_FLAG = ULONG_PTR(-1);
@@ -101,6 +102,7 @@ type
     FSocket: TSocket;
     FRemoteIP: string;
     FRemotePort: Word;
+    FConnected: Boolean;
 
     FRefCount: Integer;
     FDisconnected: Integer;
@@ -113,13 +115,11 @@ type
     FIsIPv6: Boolean;
     FConnectionSource: TConnectionSource;
     {$IFDEF __TIME_OUT_TIMER__}
-    FTimer: TIocpTimerQueueTimer;
+    FTimer: PTimer;
     FTimeout: DWORD;
     FLife: DWORD;
     // 连接超时检查
-    procedure OnTimerCreate(Sender: TObject);
-    procedure OnTimerExecute(Sender: TObject);
-    procedure OnTimerDestroy(Sender: TObject);
+    procedure OnTimerExecute;
     {$ENDIF}
 
     function GetRefCount: Integer;
@@ -131,13 +131,16 @@ type
 
     function ErrorIsNorma(Err: Integer): Boolean;
 
-    procedure IncPendingRecv;
-    procedure DecPendingRecv;
+    procedure IncPendingRecv; inline;
+    procedure DecPendingRecv; inline;
+    function GetPendingRecv: Integer; inline;
+
     function PostReadZero: Boolean;
     function PostRead: Boolean;
 
-    procedure IncPendingSend;
-    procedure DecPendingSend;
+    procedure IncPendingSend; inline;
+    procedure DecPendingSend; inline;
+    function GetPendingSend: Integer; inline;
 
     function _Send(Buf: Pointer; Size: Integer): Integer; virtual;
     procedure _CloseSocket;
@@ -168,11 +171,11 @@ type
 
     // 纯异步发送
     function Send(Buf: Pointer; Size: Integer): Integer; overload; virtual;
-    function Send(const Buf; Size: Integer): Integer; overload;
-    function Send(const Bytes: TBytes): Integer; overload;
-    function Send(const s: RawByteString): Integer; overload;
-    function Send(const s: string): Integer; overload;
     function Send(Stream: TStream): Integer; overload; virtual;
+    function Send(const Buf; Size: Integer): Integer; overload; inline;
+    function Send(const Bytes: TBytes): Integer; overload; inline;
+    function Send(const s: RawByteString): Integer; overload; inline;
+    function Send(const s: string): Integer; overload; inline;
 
     property Owner: TIocpTcpSocket read GetOwner;
     property Socket: TSocket read FSocket;
@@ -187,8 +190,8 @@ type
     property IsIdle: Boolean read GetIsIdle;
     property SndBufSize: Integer read FSndBufSize;
     property RcvBufSize: Integer read FRcvBufSize;
-    property PendingSend: Integer read FPendingSend;
-    property PendingRecv: Integer read FPendingRecv;
+    property PendingSend: Integer read GetPendingSend;
+    property PendingRecv: Integer read GetPendingRecv;
     property IsIPv6: Boolean read FIsIPv6;
     property ConnectionSource: TConnectionSource read FConnectionSource;
     {$IFDEF __TIME_OUT_TIMER__}
@@ -280,7 +283,7 @@ type
   }
   TIocpTcpSocket = class(TComponent)
   private
-    FShutdown: Boolean;
+    FShutdown: Integer;
     FIocpHandle: THandle;
     FIoThreadsNumber: Integer;
     FIoThreads: array of TIocpIoThread;
@@ -292,7 +295,6 @@ type
     FConnectionListLocker: TCriticalSection;
     FAcceptThread: TIocpAcceptThread;
     {$IFDEF __TIME_OUT_TIMER__}
-    FTimerQueue: TIocpTimerQueue;
     FTimeout: DWORD;
     FClientLife: DWORD;
     {$ENDIF}
@@ -322,6 +324,7 @@ type
     function AssociateSocketWithCompletionPort(Socket: TSocket; Connection: TIocpSocketConnection): Boolean;
     function PostNewAcceptEx(ListenSocket: TSocket; AiFamily: Integer): Boolean;
     procedure TrackSocketStatus(Socket: TSocket);
+    function IsShutdown: Boolean;
 
     procedure RequestAcceptComplete(PerIoData: PIocpPerIoData);
     procedure RequestConnectComplete(Connection: TIocpSocketConnection);
@@ -352,14 +355,15 @@ type
     procedure TriggerClientSentData(Client: TIocpSocketConnection; Buf: Pointer; Len: Integer); virtual;
   public
     constructor Create(AOwner: TComponent); overload; override;
-    constructor Create(AOwner: TComponent; IoThreadsNumber: Integer); reintroduce; overload;
+    constructor Create(AOwner: TComponent; IoThreadsNumber: Integer); reintroduce; overload; virtual;
     destructor Destroy; override;
 
     // Host设置为''时，如果系统支持IPv6则会同时监听IPv4及IPv6
     // ::1 = 127.0.0.1
     // :: = 0.0.0.0
-    function Listen(const Host: string; Port: Word; InitAcceptNum: Integer): Boolean; overload;
-    function Listen(Port: Word; InitAcceptNum: Integer): Boolean; overload;
+    // Port设为0时，由系统自动分配监听端口，返回值就是实际的端口号
+    function Listen(const Host: string; Port: Word; InitAcceptNum: Integer): Word; overload;
+    function Listen(Port: Word; InitAcceptNum: Integer): Word; overload;
     procedure StopListen(ListenSocket: TSocket);
     function AsyncConnect(const RemoteAddr: string; RemotePort: Word; Tag: Pointer = nil): TSocket;
     function Connect(const RemoteAddr: string; RemotePort: Word; Tag: Pointer = nil; ConnectTimeout: DWORD = 10000): TIocpSocketConnection;
@@ -381,9 +385,6 @@ type
     property SentBytes: Int64 read FSentBytes;
     property RecvBytes: Int64 read FRecvBytes;
     property PendingRequest: Integer read FPendingRequest;
-    {$IFDEF __TIME_OUT_TIMER__}
-    property TimerQueue: TIocpTimerQueue read FTimerQueue;
-    {$ENDIF}
   published
     {$IFDEF __TIME_OUT_TIMER__}
     property Timeout: DWORD read FTimeout write FTimeout default 0;
@@ -397,77 +398,13 @@ type
     property OnClientSentData: TIocpDataEvent read FOnClientSentData write FOnClientSentData;
   end;
 
-  TIocpLineSocketConnection = class(TIocpSocketConnection)
-  private
-    FLineText: TIocpStringStream;
-  public
-    constructor Create(AOwner: TObject); override;
-    destructor Destroy; override;
-
-    function Send(const s: RawByteString): Integer; reintroduce;
-
-    property LineText: TIocpStringStream read FLineText;
-  end;
-
-  TIocpLineRecvEvent = procedure(Sender: TObject; Client: TIocpLineSocketConnection; Line: RawByteString) of object;
-  TIocpLineSocket = class(TIocpTcpSocket)
-  private
-    FLineLimit: Integer;
-    FLineEndTag: RawByteString;
-    FOnRecvLine: TIocpLineRecvEvent;
-
-    procedure SetLineEndTag(const Value: RawByteString);
-  protected
-    procedure TriggerClientRecvData(Client: TIocpSocketConnection; Buf: Pointer; Len: Integer); override;
-
-    procedure ParseRecvData(Client: TIocpLineSocketConnection; Buf: Pointer; Len: Integer); virtual;
-
-    // 重载这个方法，在里面处理接收到的文本行
-    procedure DoOnRecvLine(Client: TIocpLineSocketConnection; Line: RawByteString); virtual;
-  public
-    constructor Create(AOwner: TComponent); override;
-
-    function Connect(const RemoteAddr: string; RemotePort: Word; Tag: Pointer = nil; ConnectTimeout: DWORD = 10000): TIocpLineSocketConnection;
-  published
-    property LineEndTag: RawByteString read FLineEndTag write SetLineEndTag;
-    property LineLimit: Integer read FLineLimit write FLineLimit default 65536;
-    property OnRecvLine: TIocpLineRecvEvent read FOnRecvLine write FOnRecvLine;
-  end;
-
-  TIocpLineServer = class(TIocpLineSocket)
-  private
-    FAddr: string;
-    FPort: Word;
-    FListened: Boolean;
-  public
-    constructor Create(AOwner: TComponent); override;
-
-    function Start: Boolean;
-    function Stop: Boolean;
-  published
-    property Addr: string read FAddr write FAddr;
-    property Port: Word read FPort write FPort;
-  end;
-
-  TSimpleIocpTcpClient = class(TIocpTcpSocket)
-  private
-    FServerPort: Word;
-    FServerAddr: string;
-  public
-    function AsyncConnect(Tag: Pointer = nil): TSocket;
-    function Connect(Tag: Pointer = nil; ConnectTimeout: DWORD = 10000): TIocpSocketConnection;
-  published
-    property ServerAddr: string read FServerAddr write FServerAddr;
-    property ServerPort: Word read FServerPort write FServerPort;
-  end;
-
 procedure Register;
 
 implementation
 
 procedure Register;
 begin
-  RegisterComponents('Iocp', [TIocpTcpSocket, TSimpleIocpTcpClient, TIocpLineSocket, TIocpLineServer]);
+  RegisterComponents('Iocp', [TIocpTcpSocket]);
 end;
 
 { TIocpSocketConnection }
@@ -488,17 +425,17 @@ end;
 
 function TIocpSocketConnection.AddRef: Integer;
 begin
-  Result := InterlockedIncrement(FRefCount);
+  Result := TInterlocked.Increment(FRefCount);
 end;
 
 function TIocpSocketConnection.Release: Boolean;
 begin
-  Result := (InterlockedDecrement(FRefCount) = 0);
+  Result := (TInterlocked.Decrement(FRefCount) = 0);
   if not Result then Exit;
 
   _CloseSocket;
+  FConnected := False;
   TriggerDisconnected;
-//  Owner.TriggerClientDisconnected(Self);
   Owner.FreeConnection(Self);
 end;
 
@@ -506,7 +443,7 @@ procedure TIocpSocketConnection.Disconnect;
 var
   PerIoData: PIocpPerIoData;
 begin
-  if (InterlockedExchange(FDisconnected, 1) <> 0) then Exit;
+  if (TInterlocked.Exchange(FDisconnected, 1) <> 0) then Exit;
 
   // 增加引用计数
   // 如果返回1则说明现在正在关闭连接
@@ -523,29 +460,27 @@ begin
     Owner.FreeIoData(PerIoData);
 
     Release;
-    {$IFDEF __TIME_OUT_TIMER__}
-    FTimer.Release;
-    {$ENDIF}
   end;
 end;
 
 procedure TIocpSocketConnection.DecPendingRecv;
 begin
-  InterlockedDecrement(FPendingRecv);
+  TInterlocked.Decrement(FPendingRecv);
 end;
 
 procedure TIocpSocketConnection.DecPendingSend;
 begin
-  InterlockedDecrement(FPendingSend);
+  TInterlocked.Decrement(FPendingSend);
 end;
 
 procedure TIocpSocketConnection.Finalize;
 begin
+  TTimerQueue.RemoveTimer(FTimer);
 end;
 
 function TIocpSocketConnection.GetIsClosed: Boolean;
 begin
-  Result := (InterlockedExchange(FDisconnected, FDisconnected) = 1);
+  Result := (TInterlocked.CompareExchange(FDisconnected, 0, 0) = 1);
 end;
 
 function TIocpSocketConnection.GetIsIdle: Boolean;
@@ -558,9 +493,19 @@ begin
   Result := TIocpTcpSocket(inherited Owner);
 end;
 
+function TIocpSocketConnection.GetPendingRecv: Integer;
+begin
+  Result := TInterlocked.CompareExchange(FPendingRecv, 0, 0);
+end;
+
+function TIocpSocketConnection.GetPendingSend: Integer;
+begin
+  Result := TInterlocked.CompareExchange(FPendingSend, 0, 0);
+end;
+
 function TIocpSocketConnection.GetRefCount: Integer;
 begin
-  Result := InterlockedExchange(FRefCount, FRefCount);
+  Result := TInterlocked.CompareExchange(FRefCount, 0, 0);
 end;
 
 function TIocpSocketConnection.InitSocket: Boolean;
@@ -574,6 +519,8 @@ var
 {$IFDEF __TCP_NODELAY__}
   NagleValue: Byte;
 {$ENDIF}
+  LAliveIn, LAliveOut: tcp_keepalive;
+  LBytesReturn: Cardinal;
 begin
   Result := False;
 
@@ -585,7 +532,7 @@ begin
     AppendLog('%s.InitSocket.setsockopt.SO_SNDBUF ERROR %d=%s', [ClassName, WSAGetLastError, SysErrorMessage(WSAGetLastError)], ltWarning);
     Exit;
   end;
-  FSndBufSize := IoCachePool.BlockSize;
+  FSndBufSize := Owner.FIoCachePool.BlockSize;
 {$ELSE}
   OptLen := SizeOf(FSndBufSize);
   if (getsockopt(FSocket, SOL_SOCKET, SO_SNDBUF,
@@ -604,7 +551,7 @@ begin
     AppendLog('%s.InitSocket.setsockopt.SO_RCVBUF ERROR %d=%s', [ClassName, WSAGetLastError, SysErrorMessage(WSAGetLastError)], ltWarning);
     Exit;
   end;
-  FRcvBufSize := IoCachePool.BlockSize;
+  FRcvBufSize := Owner.FIoCachePool.BlockSize;
 {$ELSE}
   OptLen := SizeOf(FRcvBufSize);
   if (getsockopt(FSocket, SOL_SOCKET, SO_RCVBUF,
@@ -624,6 +571,17 @@ begin
   end;
 {$ENDIF}
 
+  // 设置TCP心跳参数
+  LAliveIn.onoff := 1;
+  LAliveIn.keepalivetime := 10000; // 开始首次KeepAlive探测前的TCP空闭时间
+  LAliveIn.keepaliveinterval := 2000; // 两次KeepAlive探测的间隔 (探测5次，这个次数是TCP协议内部定义的，不能更改)
+  if (WSAIoctl(FSocket, SIO_KEEPALIVE_VALS, @LAliveIn, SizeOf(LAliveIn),
+    @LAliveOut, SizeOf(LAliveOut), @LBytesReturn, nil, nil) = SOCKET_ERROR) then
+  begin
+    AppendLog('%s.InitSocket.SIO_KEEPALIVE_VALS ERROR %d=%s', [ClassName, WSAGetLastError, SysErrorMessage(WSAGetLastError)], ltWarning);
+    Exit;
+  end;
+
   Result := True;
 end;
 
@@ -638,12 +596,12 @@ end;
 
 procedure TIocpSocketConnection.IncPendingRecv;
 begin
-  InterlockedIncrement(FPendingRecv);
+  TInterlocked.Increment(FPendingRecv);
 end;
 
 procedure TIocpSocketConnection.IncPendingSend;
 begin
-  InterlockedIncrement(FPendingSend);
+  TInterlocked.Increment(FPendingSend);
 end;
 
 procedure TIocpSocketConnection.Initialize;
@@ -664,9 +622,7 @@ begin
   {$IFDEF __TIME_OUT_TIMER__}
   FTimeout := Owner.Timeout;
   FLife := Owner.ClientLife;
-  FTimer := TIocpTimerQueueTimer.Create(Owner.FTimerQueue, 1000, OnTimerCreate);
-  FTimer.OnTimer := OnTimerExecute;
-  FTimer.OnDestroy := OnTimerDestroy;
+  FTimer := TTimerQueue.NewTimer(1000, OnTimerExecute);
   {$ENDIF}
 end;
 
@@ -751,30 +707,15 @@ begin
 end;
 
 {$IFDEF __TIME_OUT_TIMER__}
-procedure TIocpSocketConnection.OnTimerCreate(Sender: TObject);
-begin
-  AddRef; // 为Timer增加连接引用计数
-end;
-
-procedure TIocpSocketConnection.OnTimerDestroy(Sender: TObject);
-begin
-  Release; // 对应Timer创建时的AddRef(procedure Initialize)
-end;
-
-procedure TIocpSocketConnection.OnTimerExecute(Sender: TObject);
+procedure TIocpSocketConnection.OnTimerExecute;
 begin
   try
-    if IsClosed then
-    begin
-      FTimer.Release; // 连接断开时，将Timer也释放掉，以免Timer再次触发引发异常访问
-      Exit;
-    end;
+    if IsClosed then Exit;
 
     // 超时,断开连接
     if (FTimeout > 0) and (FLastTick > 0) and (CalcTickDiff(FLastTick, GetTickCount) > FTimeout) then
     begin
       TriggerTimeout;
-      FTimer.Release; // 连接断开时，将Timer也释放掉，以免Timer再次触发引发异常访问
       Disconnect;
       Exit;
     end;
@@ -783,7 +724,6 @@ begin
     if (FLife > 0) and (FFirstTick > 0) and (CalcTickDiff(FFirstTick, GetTickCount) > FLife) then
     begin
       TriggerLifeout;
-      FTimer.Release; // 连接断开时，将Timer也释放掉，以免Timer再次触发引发异常访问
       Disconnect;
       Exit;
     end;
@@ -802,6 +742,7 @@ end;
 
 procedure TIocpSocketConnection.TriggerConnected;
 begin
+  FConnected := True;
   Owner.TriggerClientConnected(Self);
 end;
 
@@ -908,7 +849,7 @@ begin
 
   IncPendingSend;
 
-  SndBuf := Owner.FIoCachePool.GetMemory(False);
+  SndBuf := Owner.FIoCachePool.GetMemory(False); // 分配发送缓存，发送完成之后释放
   CopyMemory(SndBuf, Buf, Size);
 
   PerIoData := Owner.AllocIoData(FSocket, iotWrite);
@@ -1204,6 +1145,7 @@ begin
       begin
         Iocp.Winsock2.closesocket(ListenData.Socket);
         CloseHandle(ListenData.AcceptEvent);
+        FListenList.Remove(ListenData);
         Result := True;
         Break;
       end;
@@ -1374,18 +1316,12 @@ begin
     for Client in FConnectionList.Values.ToArray do
     begin
       Client._CloseSocket;
-      {$IFDEF __TIME_OUT_TIMER__}
-      Client.FTimer.Release;
-      {$ENDIF}
       Client.Release;
     end;
 
     for Client in FIdleConnectionList.Values.ToArray do
     begin
       Client._CloseSocket;
-      {$IFDEF __TIME_OUT_TIMER__}
-      Client.FTimer.Release;
-      {$ENDIF}
       Client.Release;
     end;
   finally
@@ -1407,6 +1343,8 @@ var
   LastErr: Integer;
 begin
   Result := INVALID_SOCKET;
+  if IsShutdown then Exit;
+
   // 超过最大允许连接数
   if (FMaxClients > 0) and (FConnectionList.Count >= FMaxClients) then Exit;
 
@@ -1471,6 +1409,16 @@ begin
 
     Connection.FIsIPv6 := (POutAddrInfo.ai_family = AF_INET6);
     ExtractAddrInfo(POutAddrInfo.ai_addr, POutAddrInfo.ai_addrlen, Connection.FRemoteIP, Connection.FRemotePort);
+
+    // 将连接放到空闲连接列表中
+    // 在ShutdownWorks中才能完整释放Socket资源，否则会造成Socket句柄泄露
+    try
+      FConnectionListLocker.Enter;
+      FIdleConnectionList[ClientSocket] := Connection;
+    finally
+      FConnectionListLocker.Leave;
+    end;
+
     PerIoData := AllocIoData(ClientSocket, iotConnect);
     if not ConnectEx(ClientSocket, POutAddrInfo.ai_addr, POutAddrInfo.ai_addrlen, nil, 0, PCardinal(0)^, PWSAOverlapped(PerIoData)) and
       (WSAGetLastError <> WSA_IO_PENDING) then
@@ -1584,7 +1532,12 @@ begin
   Result := FPerIoDataPool.UsedBlocksSize;
 end;
 
-function TIocpTcpSocket.Listen(const Host: string; Port: Word; InitAcceptNum: Integer): Boolean;
+function TIocpTcpSocket.IsShutdown: Boolean;
+begin
+  Result := (TInterlocked.Exchange(FShutdown, FShutdown) = 1);
+end;
+
+function TIocpTcpSocket.Listen(const Host: string; Port: Word; InitAcceptNum: Integer): Word;
 const
   IPV6_V6ONLY = 27;
 var
@@ -1592,11 +1545,12 @@ var
   ListenSocket: TSocket;
   InAddrInfo: TAddrInfoW;
   POutAddrInfo, Ptr: PAddrInfoW;
+  Len: Integer;
   ListenCount: Integer;
   LastErr: Integer;
 begin
-  Result := False;
-  if not Assigned(FAcceptThread) then Exit;  
+  Result := 0;
+  if IsShutdown or not Assigned(FAcceptThread) then Exit;
 
   try
     // 如果传递了一个有效地址则监听该地址
@@ -1668,20 +1622,37 @@ begin
           Exit;
         end;
 
+        // 如果Port传入0，则监听随机端口，这里取得实际分配的端口号
+        if (Port = 0) then
+        begin
+          Len := Ptr.ai_addrlen;
+          if (getsockname(ListenSocket, Ptr.ai_addr, Len) = -1) then
+          begin
+            LastErr := WSAGetLastError;
+            AppendLog('%s.Listen.getsockname(Port=%d, Socket=%d), ERROR %d=%s', [ClassName, Port, ListenSocket, LastErr, SysErrorMessage(LastErr)], ltWarning);
+            Exit;
+          end;
+          Port := ntohs(Ptr.ai_addr.sin_port);
+        end;
+
+        // 如果端口传入0，让所有地址统一用首个分配到的端口
+        if (Ptr.ai_next <> niL) then
+          Ptr.ai_next.ai_addr.sin_port := Ptr.ai_addr.sin_port;
+
         Ptr := Ptr.ai_next;
       end;
     finally
       freeaddrinfo(POutAddrInfo);
     end;
 
-    Result := True;
+    Result := Port;
   except
     on e: Exception do
       AppendLog('%s.Listen ERROR %s=%s', [ClassName, e.ClassName, e.Message], ltException);
   end;
 end;
 
-function TIocpTcpSocket.Listen(Port: Word; InitAcceptNum: Integer): Boolean;
+function TIocpTcpSocket.Listen(Port: Word; InitAcceptNum: Integer): Word;
 begin
   Result := Listen('', Port, InitAcceptNum);
 end;
@@ -1749,7 +1720,7 @@ var
   LocalAddrLen, RemoteAddrLen: Integer;
   PLocalAddr, PRemoteAddr: PSockAddr;
 begin
-  if FShutdown then Exit;
+  if IsShutdown then Exit;
   
   try
     // 将连接放到工作连接列表中
@@ -1825,7 +1796,6 @@ begin
     end;
 
     Connection.TriggerConnected;
-//    TriggerClientConnected(Connection);
 
     // 连接建立之后PostZero读取请求
     if not Connection.PostReadZero then Exit;
@@ -1837,27 +1807,26 @@ end;
 
 procedure TIocpTcpSocket.RequestConnectComplete(Connection: TIocpSocketConnection);
 begin
-  if FShutdown then Exit;
+  if IsShutdown then Exit;
 
   try
     try
+      try
+        FConnectionListLocker.Enter;
+        FIdleConnectionList.Delete(Connection.FSocket);
+        FConnectionList[Connection.FSocket] := Connection;
+      finally
+        FConnectionListLocker.Leave;
+      end;
+
       if not Connection.InitSocket then
       begin
         Connection.Disconnect;
         Exit;
       end;
 
-      try
-        FConnectionListLocker.Enter;
-        FConnectionList[Connection.FSocket] := Connection;
-      finally
-        FConnectionListLocker.Leave;
-      end;
-
       Connection.UpdateTick;
-
       Connection.TriggerConnected;
-//      TriggerClientConnected(Connection);
 
       // 连接建立之后PostZero读取请求
       if not Connection.PostReadZero then Exit;
@@ -1875,9 +1844,6 @@ procedure TIocpTcpSocket.RequestDisconnectComplete(
 begin
   try
     Connection.Release;
-    {$IFDEF __TIME_OUT_TIMER__}
-    Connection.FTimer.Release;
-    {$ENDIF}
   finally
     Connection.Release; // 对应 Disconnect 中的 AddRef;
   end;
@@ -1925,11 +1891,10 @@ begin
       PerIoData.Buffer.DataBuf.Len := PerIoData.BytesTransfered;
 
       try
-        InterlockedIncrement(FPendingRequest);
+        TInterlocked.Increment(FPendingRequest);
         Connection.TriggerRecvData(PerIoData.Buffer.DataBuf.buf, PerIoData.Buffer.DataBuf.len);
-        //TriggerClientRecvData(Connection, PerIoData.Buffer.DataBuf.buf, PerIoData.Buffer.DataBuf.len);
       finally
-        InterlockedDecrement(FPendingRequest);
+        TInterlocked.Decrement(FPendingRequest);
       end;
 
       // 继续接收客户端数据
@@ -1963,8 +1928,8 @@ begin
       TInterlocked.Add(FSentBytes, PerIoData.BytesTransfered);
       PerIoData.Buffer.DataBuf.Len := PerIoData.BytesTransfered;
       Connection.TriggerSentData(PerIoData.Buffer.DataBuf.Buf, PerIoData.Buffer.DataBuf.Len);
-      FIoCachePool.FreeMemory(PerIoData.Buffer.DataBuf.Buf);
     finally
+      FIoCachePool.FreeMemory(PerIoData.Buffer.DataBuf.Buf); // 对应PostWrite中分配的发送内存块
       Connection.Release; // 对应PostWrite中的AddRef
     end;
   except
@@ -2011,14 +1976,9 @@ begin
   // 创建监听线程
   FAcceptThread := TIocpAcceptThread.Create(Self);
 
-  {$IFDEF __TIME_OUT_TIMER__}
-  // 创建时钟队列
-  FTimerQueue := TIocpTimerQueue.Create;
-  {$ENDIF}
-
   FSentBytes := 0;
   FRecvBytes := 0;
-  FShutdown := False;
+  TInterlocked.Exchange(FShutdown, 0);
 end;
 
 procedure TIocpTcpSocket.ShutdownWorkers;
@@ -2026,16 +1986,19 @@ var
   i: Integer;
   LTick, LTimeout: LongWord;
 begin
-  FShutdown := True;
+  TInterlocked.Exchange(FShutdown, 1);
   if (FIocpHandle = 0) then Exit;
+
+  // 关闭监听线程
+  if Assigned(FAcceptThread) then
+  begin
+    FAcceptThread.Quit;
+    FAcceptThread.WaitFor;
+    FreeAndNil(FAcceptThread);
+  end;
 
   // 断开所有连接
   DisconnectAll;
-
-  {$IFDEF __TIME_OUT_TIMER__}
-  // 释放时钟队列
-  FTimerQueue.Release;
-  {$ENDIF}
 
   {$IFDEF __TIME_OUT_TIMER__}
   if (FTimeout > 0) and (FTimeout < 5000) then
@@ -2051,14 +2014,6 @@ begin
   begin
     SleepEx(10, True);
     if (CalcTickDiff(LTick, GetTickCount) > LTimeout) then Break;
-  end;
-
-  // 关闭监听线程
-  if Assigned(FAcceptThread) then
-  begin
-    FAcceptThread.Quit;
-    FAcceptThread.WaitFor;
-    FreeAndNil(FAcceptThread);
   end;
 
   // 关闭IO线程
@@ -2138,145 +2093,6 @@ procedure TIocpTcpSocket.TriggerClientSentData(
 begin
   if Assigned(OnClientSentData) then
     OnClientSentData(Self, Client, Buf, Len);
-end;
-
-{ TIocpLineSocketConnection }
-
-constructor TIocpLineSocketConnection.Create(AOwner: TObject);
-begin
-  inherited Create(AOwner);
-
-  FLineText := TIocpStringStream.Create('');
-end;
-
-destructor TIocpLineSocketConnection.Destroy;
-begin
-  FLineText.Free;
-
-  inherited Destroy;
-end;
-
-function TIocpLineSocketConnection.Send(const s: RawByteString): Integer;
-begin
-  Result := inherited Send(s + TIocpLineSocket(Owner).LineEndTag);
-end;
-
-{ TIocpLineSocket }
-
-function TIocpLineSocket.Connect(const RemoteAddr: string; RemotePort: Word;
-  Tag: Pointer; ConnectTimeout: DWORD): TIocpLineSocketConnection;
-begin
-  Result := TIocpLineSocketConnection(inherited Connect(RemoteAddr, RemotePort, Tag, ConnectTimeout));
-end;
-
-constructor TIocpLineSocket.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-
-  ConnectionClass := TIocpLineSocketConnection;
-  FLineEndTag := #13#10;
-  FLineLimit := 65536;
-end;
-
-procedure TIocpLineSocket.DoOnRecvLine(Client: TIocpLineSocketConnection;
-  Line: RawByteString);
-begin
-  if Assigned(FOnRecvLine) then
-    FOnRecvLine(Self, Client, Line);
-end;
-
-procedure TIocpLineSocket.ParseRecvData(Client: TIocpLineSocketConnection;
-  Buf: Pointer; Len: Integer);
-var
-  pch: PAnsiChar;
-  Ch: AnsiChar;
-  TagLen: Integer;
-begin
-  pch := Buf;
-  TagLen := Length(FLineEndTag);
-  while (Len > 0) do
-  begin
-    Ch := pch^;
-
-    // 发现换行符
-    if (TagLen > 0) and (Len >= TagLen) and (StrLIComp(pch, PAnsiChar(FLineEndTag), TagLen) = 0) then
-    begin
-      if (Client.LineText.Size > 0) then
-      begin
-        DoOnRecvLine(Client, Client.LineText.DataString);
-        Client.LineText.Clear;
-      end;
-      Dec(Len, TagLen);
-      Inc(pch, TagLen);
-      Continue;
-    end;
-
-    Client.LineText.Write(Ch, 1);
-
-    // 超出最大单行尺寸
-    if (FLineLimit > 0) and (Client.LineText.Size >= FLineLimit) then
-    begin
-      DoOnRecvLine(Client, Client.LineText.DataString);
-      Client.LineText.Clear;
-    end;
-
-    Dec(Len, SizeOf(Ch));
-    Inc(pch);
-  end;
-end;
-
-procedure TIocpLineSocket.SetLineEndTag(const Value: RawByteString);
-begin
-  if (Value <> '') then
-    FLineEndTag := Value
-  else
-    FLineEndTag := #13#10;
-end;
-
-procedure TIocpLineSocket.TriggerClientRecvData(Client: TIocpSocketConnection;
-  Buf: Pointer; Len: Integer);
-begin
-  ParseRecvData(TIocpLineSocketConnection(Client), Buf, Len);
-end;
-
-{ TIocpLineServer }
-
-constructor TIocpLineServer.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-
-  FListened := False;
-end;
-
-function TIocpLineServer.Start: Boolean;
-begin
-  if FListened then Exit(True);
-
-  StartupWorkers;
-  FListened := inherited Listen(FAddr, FPort, 1);
-  Result := FListened;
-end;
-
-function TIocpLineServer.Stop: Boolean;
-begin
-  if not FListened then Exit(True);
-
-  ShutdownWorkers;
-  FListened := False;
-  Result := True;
-end;
-
-{ TSimpleIocpTcpClient }
-
-function TSimpleIocpTcpClient.AsyncConnect(Tag: Pointer): TSocket;
-begin
-  Result := inherited AsyncConnect(FServerAddr, FServerPort, Tag);
-end;
-
-function TSimpleIocpTcpClient.Connect(Tag: Pointer;
-  ConnectTimeout: DWORD): TIocpSocketConnection;
-begin
-  Result := inherited Connect(FServerAddr, FServerPort, Tag, ConnectTimeout);
 end;
 
 initialization
