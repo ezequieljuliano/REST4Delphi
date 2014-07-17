@@ -39,6 +39,28 @@ type
     WILDCARD = '*/*';
   end;
 
+  TRESTStatusCode = class sealed
+  public
+    const
+    // 2xx Success
+    OK = 200;
+    CREATED = 201;
+    ACCEPTED = 202;
+    NO_CONTENT = 204;
+    // 3xx Redirection
+    NOT_MODIFIED = 304;
+    // 4xx Client Error
+    BAD_REQUEST = 400;
+    UNAUTHORIZED = 401;
+    FORBIDDEN = 403;
+    NOT_FOUND = 404;
+    CONFLICT = 409;
+    UNSUPPORTED_MEDIA_TYPE = 415;
+    // 5xx Server Error
+    INTERNAL_SERVER_ERROR = 500;
+    NOT_IMPLEMENTED = 501;
+  end;
+
   IRESTUserAuthenticate = interface
     ['{56A84057-56BB-4742-8ED2-6C5D47CA3E3A}']
     function GetUserName(): string;
