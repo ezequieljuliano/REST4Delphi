@@ -280,6 +280,7 @@ begin
       FHTTP.Compressor := nil;
     end;
   end;
+  Result := Self;
 end;
 
 function TRESTClient.ContentEncoding: string;
@@ -904,6 +905,7 @@ begin
       FHTTP.IOHandler := nil;
     end;
   end;
+  Result := Self;
 end;
 
 procedure TRESTClient.SetReadTimeout(const Value: Integer);
