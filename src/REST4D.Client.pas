@@ -8,13 +8,20 @@ uses
   ObjectsMappers,
   System.Generics.Collections,
   System.SysUtils,
+  System.StrUtils,
+
 {$IF Defined(VER270)}
+
   System.JSON,
+
 {$ELSE}
+
   Data.DBXJSON,
   Data.SqlExpr,
   DBXCommon,
+
 {$IFEND}
+
   IdURI;
 
 type
@@ -57,7 +64,9 @@ type
     function ClearHeaders(): TRESTfulClient;
     function Header(const pField, pValue: string): TRESTfulClient;
     function Accept(const pAcceptType: string): TRESTfulClient;
+    function AcceptCharSet(const pCharsetType: string): TRESTfulClient;
     function ContentType(const pContentType: string): TRESTfulClient;
+    function ContentCharSet(const pCharsetType: string): TRESTfulClient;
     function Resource(const pResource: string): TRESTfulClient;
     function Params(const pParams: array of string): TRESTfulClient;
     function SSL(const pEnabled: Boolean = True): TRESTfulClient;
@@ -85,6 +94,17 @@ implementation
 function TRESTfulClient.Accept(const pAcceptType: string): TRESTfulClient;
 begin
   FRESTClient.Accept(pAcceptType);
+  Result := Self;
+end;
+
+function TRESTfulClient.AcceptCharSet(const pCharsetType: string): TRESTfulClient;
+begin
+  if FRESTClient.Accept().IsEmpty then
+    raise ERESTClientException.Create('First set the Accept property!');
+
+  if not AnsiContainsText(FRESTClient.Accept(), 'charset') then
+    FRESTClient.Accept(FRESTClient.Accept() + ';charset=' + pCharsetType);
+
   Result := Self;
 end;
 
@@ -124,6 +144,17 @@ end;
 function TRESTfulClient.ContentType(const pContentType: string): TRESTfulClient;
 begin
   FRESTClient.ContentType(pContentType);
+  Result := Self;
+end;
+
+function TRESTfulClient.ContentCharSet(const pCharsetType: string): TRESTfulClient;
+begin
+  if FRESTClient.ContentType().IsEmpty then
+    raise ERESTClientException.Create('First set the ContentType property!');
+
+  if not AnsiContainsText(FRESTClient.ContentType(), 'charset') then
+    FRESTClient.ContentType(FRESTClient.ContentType() + ';charset=' + pCharsetType);
+
   Result := Self;
 end;
 

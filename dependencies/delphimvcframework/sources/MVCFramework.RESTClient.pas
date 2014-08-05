@@ -212,6 +212,14 @@ begin
     Result[i] := AStrings[i];
 end;
 
+function UTF8ToStr(const WS: string): AnsiString; //Ezequiel Juliano Müller - Início
+var
+  szTitle: UTF8String;
+begin
+  szTitle := UTF8String(WS);
+  SetString(Result, PAnsiChar(szTitle), Length(szTitle));
+end; //Ezequiel Juliano Müller - Fim
+
 function TRESTClient.Accept(const AcceptHeader: string): TRESTClient;
 begin
   SetAccept(AcceptHeader);
@@ -822,7 +830,12 @@ begin
 
           RawBody.Position := 0;
           FRawBody.Size := 0;
-          FRawBody.WriteString(UTF8Encode(ABodyString));
+
+          if (LowerCase(FHTTP.Request.CharSet) = 'utf-8') then //Ezequiel Juliano Müller - Início
+            FRawBody.WriteString(UTF8ToStr(ABodyString))
+          else
+            FRawBody.WriteString(ABodyString); //Ezequiel Juliano Müller - Fim
+
           FHTTP.Post(AUrl, FRawBody, Result.Body);
         end;
 
@@ -836,7 +849,12 @@ begin
         begin
           RawBody.Position := 0;
           FRawBody.Size := 0;
-          FRawBody.WriteString(UTF8Encode(ABodyString));
+
+          if (LowerCase(FHTTP.Request.CharSet) = 'utf-8') then //Ezequiel Juliano Müller - Início
+            FRawBody.WriteString(UTF8ToStr(ABodyString))
+          else
+            FRawBody.WriteString(ABodyString); //Ezequiel Juliano Müller - Fim
+
           FHTTP.Put(AUrl, FRawBody, Result.Body);
         end;
 

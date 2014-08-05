@@ -39,6 +39,13 @@ type
     WILDCARD = '*/*';
   end;
 
+  TRESTCharSetType = class sealed
+  public
+    const
+    UTF8 = 'utf-8';
+    ISO88591 = 'iso-8859-1';
+  end;
+
   TRESTStatusCode = class sealed
   public
     const
