@@ -49,6 +49,7 @@ begin
   vServerInfo.ServerName := 'Server1';
   vServerInfo.Port := 3000;
   vServerInfo.MaxConnections := 1024;
+  vServerInfo.Bridge := TRESTBridge.rbIndy;
   vServerInfo.WebModuleClass := AppWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
@@ -164,8 +165,8 @@ begin
     vRestCli.Resource('/users').Params([]);
     vRestCli.Authorization('ezequiel', '123');
     CheckEqualsString('[{"Cod":0,"Name":"Ezequiel 0","Pass":"0"},{"Cod":1,"Name":"Ezequiel 1","Pass":"1"},' +
-      '{"Cod":2,"Name":"Ezequiel 2","Pass":"2"},{"Cod":3,"Name":"Ezequiel 3","Pass":"3"},{"Cod":4,"Name":"Ezequiel 4","Pass":"4"},'+
-      '{"Cod":5,"Name":"Ezequiel 5","Pass":"5"},{"Cod":6,"Name":"Ezequiel 6","Pass":"6"},{"Cod":7,"Name":"Ezequiel 7","Pass":"7"},'+
+      '{"Cod":2,"Name":"Ezequiel 2","Pass":"2"},{"Cod":3,"Name":"Ezequiel 3","Pass":"3"},{"Cod":4,"Name":"Ezequiel 4","Pass":"4"},' +
+      '{"Cod":5,"Name":"Ezequiel 5","Pass":"5"},{"Cod":6,"Name":"Ezequiel 6","Pass":"6"},{"Cod":7,"Name":"Ezequiel 7","Pass":"7"},' +
       '{"Cod":8,"Name":"Ezequiel 8","Pass":"8"},{"Cod":9,"Name":"Ezequiel 9","Pass":"9"},{"Cod":10,"Name":"Ezequiel 10","Pass":"10"}]',
       vRestCli.GET.AsString);
   finally

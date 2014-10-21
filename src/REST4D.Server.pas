@@ -10,11 +10,14 @@ uses
   System.Generics.Collections,
   Web.HTTPApp,
   IdHTTPWebBrokerBridge,
+  Iocp.DSHTTPWebBroker,
   System.SyncObjs;
 
 type
 
   ERESTSeverException = class(ERESTException);
+
+  TRESTBridge = (rbIndy, rbIOCP);
 
   IRESTServerInfo = interface
     ['{3A328987-2485-4660-BB9B-B8AFFF47E4BA}']
@@ -30,12 +33,16 @@ type
     function GetWebModuleClass(): TComponentClass;
     procedure SetWebModuleClass(const pValue: TComponentClass);
 
+    function GetBridge(): TRESTBridge;
+    procedure SetBridge(const pValue: TRESTBridge);
+
     function GetAuthentication(): IRESTAuthentication;
 
     property ServerName: string read GetServerName write SetServerName;
     property Port: Integer read GetPort write SetPort;
     property MaxConnections: Integer read GetMaxConnections write SetMaxConnections;
     property WebModuleClass: TComponentClass read GetWebModuleClass write SetWebModuleClass;
+    property Bridge: TRESTBridge read GetBridge write SetBridge;
     property Authentication: IRESTAuthentication read GetAuthentication;
   end;
 
@@ -72,6 +79,12 @@ type
   end;
 
   TRESTServerContainerFactory = class sealed
+  strict private
+    class var GlobalCriticalSection: TCriticalSection;
+    class var SingletonServerContainer: IRESTServerContainer;
+
+    class constructor Create;
+    class destructor Destroy;
   public
     class function GetSingleton(): IRESTServerContainer; static;
   end;
@@ -91,10 +104,6 @@ type
 
 implementation
 
-var
-  _vCSection: TCriticalSection = nil;
-  _vRESTServerContainer: IRESTServerContainer = nil;
-
 type
 
   TRESTServerInfo = class(TInterfacedObject, IRESTServerInfo)
@@ -103,6 +112,7 @@ type
     FPort: Integer;
     FMaxConnections: Integer;
     FWebModuleClass: TComponentClass;
+    FBridge: TRESTBridge;
     FAuthentication: IRESTAuthentication;
   public
     constructor Create();
@@ -120,18 +130,23 @@ type
     function GetWebModuleClass(): TComponentClass;
     procedure SetWebModuleClass(const pValue: TComponentClass);
 
+    function GetBridge(): TRESTBridge;
+    procedure SetBridge(const pValue: TRESTBridge);
+
     function GetAuthentication(): IRESTAuthentication;
 
     property ServerName: string read GetServerName write SetServerName;
     property Port: Integer read GetPort write SetPort;
     property MaxConnections: Integer read GetMaxConnections write SetMaxConnections;
     property WebModuleClass: TComponentClass read GetWebModuleClass write SetWebModuleClass;
+    property Bridge: TRESTBridge read GetBridge write SetBridge;
     property Authentication: IRESTAuthentication read GetAuthentication;
   end;
 
   TRESTServer = class(TInterfacedObject, IRESTServer)
   strict private
-    FServer: TIdHTTPWebBrokerBridge;
+    FIndyBridge: TIdHTTPWebBrokerBridge;
+    FIOCPBridge: TIocpWebBrokerBridge;
     FInfo: IRESTServerInfo;
   public
     constructor Create();
@@ -167,7 +182,7 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
-{ TRESTEngine }
+  { TRESTEngine }
 
 function TRESTEngine.Authenticate(const pRequest: TWebRequest): Boolean;
   function ContainsAuthorization(): Boolean;
@@ -266,6 +281,7 @@ begin
   FPort := 0;
   FMaxConnections := 0;
   FWebModuleClass := nil;
+  FBridge := TRESTBridge.rbIndy;
   FAuthentication := TRESTUserAuthenticationFactory.GetInstance;
 end;
 
@@ -280,6 +296,11 @@ begin
   if (FAuthentication = nil) then
     raise ERESTSeverException.Create('Authentication was not created!');
   Result := FAuthentication;
+end;
+
+function TRESTServerInfo.GetBridge: TRESTBridge;
+begin
+  Result := FBridge;
 end;
 
 function TRESTServerInfo.GetMaxConnections: Integer;
@@ -310,6 +331,11 @@ begin
   Result := FWebModuleClass;
 end;
 
+procedure TRESTServerInfo.SetBridge(const pValue: TRESTBridge);
+begin
+  FBridge := pValue;
+end;
+
 procedure TRESTServerInfo.SetMaxConnections(const pValue: Integer);
 begin
   FMaxConnections := pValue;
@@ -334,13 +360,18 @@ end;
 
 constructor TRESTServer.Create;
 begin
-  FServer := TIdHTTPWebBrokerBridge.Create(nil);
+  FIndyBridge := nil;
+  FIOCPBridge := nil;
   FInfo := nil;
 end;
 
 destructor TRESTServer.Destroy;
 begin
-  FreeAndNil(FServer);
+  if (FIndyBridge <> nil) then
+    FreeAndNil(FIndyBridge);
+
+  if (FIOCPBridge <> nil) then
+    FreeAndNil(FIOCPBridge);
   inherited;
 end;
 
@@ -359,21 +390,40 @@ begin
 
   FInfo := pServerInfo;
 
-  Stop();
-
-  FServer.DefaultPort := FInfo.Port;
-  FServer.MaxConnections := FInfo.MaxConnections;
-  FServer.RegisterWebModuleClass(FInfo.WebModuleClass);
+  case FInfo.Bridge of
+    rbIndy:
+      begin
+        FIndyBridge := TIdHTTPWebBrokerBridge.Create(nil);
+        Stop();
+        FIndyBridge.DefaultPort := FInfo.Port;
+        FIndyBridge.MaxConnections := FInfo.MaxConnections;
+        FIndyBridge.RegisterWebModuleClass(FInfo.WebModuleClass);
+      end;
+    rbIOCP:
+      begin
+        FIOCPBridge := TIocpWebBrokerBridge.Create(nil);
+        Stop();
+        FIOCPBridge.Port := FInfo.Port;
+        FIOCPBridge.MaxClients := FInfo.MaxConnections;
+        FIOCPBridge.RegisterWebModuleClass(FInfo.WebModuleClass);
+      end;
+  end;
 end;
 
 procedure TRESTServer.Start;
 begin
-  FServer.Active := True;
+  case FInfo.Bridge of
+    rbIndy: FIndyBridge.Active := True;
+    rbIOCP: FIOCPBridge.Active := True;
+  end;
 end;
 
 procedure TRESTServer.Stop;
 begin
-  FServer.Active := False;
+  case FInfo.Bridge of
+    rbIndy: FIndyBridge.Active := False;
+    rbIOCP: FIOCPBridge.Active := False;
+  end;
 end;
 
 { TRESTServerContainer }
@@ -388,7 +438,7 @@ var
   vServer: IRESTServer;
   vPair: TPair<string, IRESTServer>;
 begin
-  if not (FServers.ContainsKey(pServerInfo.ServerName)) then
+  if not(FServers.ContainsKey(pServerInfo.ServerName)) then
   begin
     for vPair in FServers do
       if (vPair.Value.Info.WebModuleClass = pServerInfo.WebModuleClass) then
@@ -447,28 +497,30 @@ end;
 
 { TRESTServerContainerFactory }
 
-class function TRESTServerContainerFactory.GetSingleton: IRESTServerContainer;
+class constructor TRESTServerContainerFactory.Create;
 begin
-  if (_vRESTServerContainer = nil) then
-  begin
-    _vCSection.Enter;
-    try
-      _vRESTServerContainer := TRESTServerContainer.Create;
-    finally
-      _vCSection.Leave;
-    end;
-  end;
-  Result := _vRESTServerContainer;
+  GlobalCriticalSection := TCriticalSection.Create();
+  SingletonServerContainer := nil;
 end;
 
-initialization
+class destructor TRESTServerContainerFactory.Destroy;
+begin
+  SingletonServerContainer := nil;
+  FreeAndNil(GlobalCriticalSection);
+end;
 
-_vCSection := TCriticalSection.Create();
-
-finalization
-
-_vRESTServerContainer := nil;
-
-FreeAndNil(_vCSection);
+class function TRESTServerContainerFactory.GetSingleton: IRESTServerContainer;
+begin
+  if (SingletonServerContainer = nil) then
+  begin
+    GlobalCriticalSection.Enter;
+    try
+      SingletonServerContainer := TRESTServerContainer.Create;
+    finally
+      GlobalCriticalSection.Leave;
+    end;
+  end;
+  Result := SingletonServerContainer;
+end;
 
 end.

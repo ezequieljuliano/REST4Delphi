@@ -9,3 +9,7 @@
 
 /dependencies/delphimvcframework/sources/__history/*.~1~
 /dependencies/delphimvcframework/sources/__history
+/dependencies/delphimvcframework/samples/iocpsample/*.dsk
+/dependencies/delphimvcframework/samples/iocpsample/*.identcache
+/unittest/*.dsk
+/unittest/*.~dsk
