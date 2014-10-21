@@ -10,7 +10,7 @@ uses
   IdTCPClient,
   IdHTTP,
   idURI,
-{$IF not Defined(VER270)}
+{$IF CompilerVersion < 27}
   Data.DBXJSON,
 {$ELSE}
   System.JSON,
@@ -142,8 +142,8 @@ type
     function Accept(const AcceptHeader: string): TRESTClient; overload;
     function Accept: string; overload;
 
-    function SSL(const pEnabled: Boolean = True): TRESTClient;  //Ezequiel J. Müller
-    function Compression(const pEnabled: Boolean = True): TRESTClient; //Ezequiel J. Müller
+    function SSL(const AEnabled: Boolean = True): TRESTClient;  //Ezequiel J. Müller
+    function Compression(const AEnabled: Boolean = True): TRESTClient; //Ezequiel J. Müller
 
     function ContentType(const ContentTypeHeader: string): TRESTClient;
       overload;
@@ -273,9 +273,9 @@ begin
   Result := Self;
 end;
 
-function TRESTClient.Compression(const pEnabled: Boolean): TRESTClient; //Ezequiel J. Müller
+function TRESTClient.Compression(const AEnabled: Boolean): TRESTClient; //Ezequiel J. Müller
 begin
-  if pEnabled then
+  if AEnabled then
   begin
     if not Assigned(FHTTP.Compressor) then
       FHTTP.Compressor := TIdCompressorZLib.Create(FHTTP);
@@ -908,9 +908,9 @@ begin
     FHTTP.CookieManager.CookieCollection.Clear;
 end;
 
-function TRESTClient.SSL(const pEnabled: Boolean): TRESTClient; //Ezequiel J. Müller
+function TRESTClient.SSL(const AEnabled: Boolean): TRESTClient; //Ezequiel J. Müller
 begin
-  if pEnabled then
+  if AEnabled then
   begin
     if not Assigned(FHTTP.IOHandler) then
       FHTTP.IOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FHTTP);
