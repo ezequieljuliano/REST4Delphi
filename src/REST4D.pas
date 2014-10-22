@@ -5,8 +5,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  IdHashSHA,
-  IdSSLOpenSSLHeaders,
+  IdGlobal,
+  IdHashMessageDigest,
   System.Generics.Collections,
   MVCFramework;
 
@@ -18,7 +18,7 @@ type
   public
     class function EncodeBase64(pValue: string): string; static;
     class function DecodeBase64(pValue: string): string; static;
-    class function HashSHA1(const pSource: string): string; static;
+    class function MD5(const pSource: string): string; static;
   end;
 
   TRESTMediaType = class sealed
@@ -174,7 +174,9 @@ end;
 
 procedure TRESTUserAuthenticate.GenerateApiKey;
 begin
-  FApiKey := TRESTCodification.HashSHA1(FUserName + FPassword);
+  FApiKey := TRESTCodification.MD5(FUserName + FPassword);
+  if FApiKey.IsEmpty then
+    raise ERESTException.Create('ApiKey is empty!');
 end;
 
 function TRESTUserAuthenticate.GetApiKey: string;
@@ -298,20 +300,17 @@ begin
     end;
 end;
 
-class function TRESTCodification.HashSHA1(const pSource: string): string;
+class function TRESTCodification.MD5(const pSource: string): string;
 var
-  vSHA1: TIdHashSHA1;
+  vMD5: TIdHashMessageDigest5;
 begin
   Result := EmptyStr;
   if (pSource <> EmptyStr) then
-    if IdSSLOpenSSLHeaders.Load() then
-    begin
-      vSHA1 := TIdHashSHA1.Create;
-      try
-        Result := LowerCase(vSHA1.HashStringAsHex(pSource));
-      finally
-        FreeAndNil(vSHA1);
-      end;
+    vMD5 := TIdHashMessageDigest5.Create;
+    try
+      Result := vMD5.HashStringAsHex(pSource, IndyTextEncoding_UTF8);
+    finally
+      FreeAndNil(vMD5);
     end;
 end;
 

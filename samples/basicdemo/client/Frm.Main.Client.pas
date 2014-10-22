@@ -16,11 +16,13 @@ type
     Button3: TButton;
     Button4: TButton;
     Button5: TButton;
+    Button6: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
     procedure Button5Click(Sender: TObject);
+    procedure Button6Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -142,6 +144,24 @@ begin
     end;
 
     vResp := vRestCli.POST<TUser>(vUsers);
+
+    MemResp.Lines.Add(vResp.AsString);
+  finally
+    FreeAndNil(vRestCli);
+  end;
+end;
+
+procedure TFrmMainClient.Button6Click(Sender: TObject);
+var
+  vRestCli: TRESTfulClient;
+  vResp: TRESTfulResponse;
+begin
+  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  try
+    vRestCli.Resource('/user').Params([]);
+    vRestCli.Authorization('123', '123');
+
+    vResp := vRestCli.GET;
 
     MemResp.Lines.Add(vResp.AsString);
   finally

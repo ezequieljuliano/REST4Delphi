@@ -42,7 +42,7 @@ object FrmMainClient: TFrmMainClient
   object Button3: TButton
     Left = 194
     Top = 24
-    Width = 75
+    Width = 135
     Height = 25
     Caption = 'Hello World'
     TabOrder = 3
@@ -65,5 +65,14 @@ object FrmMainClient: TFrmMainClient
     Caption = 'Post Users'
     TabOrder = 5
     OnClick = Button5Click
+  end
+  object Button6: TButton
+    Left = 194
+    Top = 55
+    Width = 135
+    Height = 25
+    Caption = 'Get User (Unauthorized)'
+    TabOrder = 6
+    OnClick = Button6Click
   end
 end

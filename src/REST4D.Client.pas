@@ -9,19 +9,11 @@ uses
   System.Generics.Collections,
   System.SysUtils,
   System.StrUtils,
-
-{$IF Defined(VER270)}
-
-  System.JSON,
-
-{$ELSE}
-
+{$IF CompilerVersion < 27}
   Data.DBXJSON,
-  Data.SqlExpr,
-  DBXCommon,
-
+{$ELSE}
+  System.JSON,
 {$IFEND}
-
   IdURI;
 
 type

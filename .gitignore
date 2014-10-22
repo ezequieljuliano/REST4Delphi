@@ -13,3 +13,4 @@
 /dependencies/delphimvcframework/samples/iocpsample/*.identcache
 /unittest/*.dsk
 /unittest/*.~dsk
+/samples/basicdemo/client/__history
