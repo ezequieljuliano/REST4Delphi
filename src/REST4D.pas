@@ -7,8 +7,7 @@ uses
   System.Classes,
   IdGlobal,
   IdHashMessageDigest,
-  System.Generics.Collections,
-  MVCFramework;
+  System.Generics.Collections;
 
 type
 
