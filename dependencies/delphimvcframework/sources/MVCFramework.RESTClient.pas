@@ -201,7 +201,6 @@ uses
 { TRSF }
 
 function StringsToArrayOfString(const AStrings: TStrings): TArrayOfString;
-
 var
   i: Integer;
 begin
@@ -211,14 +210,6 @@ begin
   for i := 0 to AStrings.Count - 1 do
     Result[i] := AStrings[i];
 end;
-
-function UTF8ToStr(const WS: string): AnsiString; //Ezequiel Juliano Müller - Início
-var
-  szTitle: UTF8String;
-begin
-  szTitle := UTF8String(WS);
-  SetString(Result, PAnsiChar(szTitle), Length(szTitle));
-end; //Ezequiel Juliano Müller - Fim
 
 function TRESTClient.Accept(const AcceptHeader: string): TRESTClient;
 begin
@@ -832,7 +823,7 @@ begin
           FRawBody.Size := 0;
 
           if (LowerCase(FHTTP.Request.CharSet) = 'utf-8') then //Ezequiel Juliano Müller - Início
-            FRawBody.WriteString(UTF8ToStr(ABodyString))
+            FRawBody.WriteString(UTF8ToString(ABodyString))
           else
             FRawBody.WriteString(ABodyString); //Ezequiel Juliano Müller - Fim
 
@@ -851,7 +842,7 @@ begin
           FRawBody.Size := 0;
 
           if (LowerCase(FHTTP.Request.CharSet) = 'utf-8') then //Ezequiel Juliano Müller - Início
-            FRawBody.WriteString(UTF8ToStr(ABodyString))
+            FRawBody.WriteString(UTF8ToString(ABodyString))
           else
             FRawBody.WriteString(ABodyString); //Ezequiel Juliano Müller - Fim
 

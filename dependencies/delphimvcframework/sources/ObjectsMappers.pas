@@ -34,7 +34,7 @@ uses
 {$IF CompilerVersion > 25}
   FireDAC.Comp.Client, FireDAC.Stan.Param,
 {$IFEND}
-  DuckListU;
+  DuckListU, System.SysUtils;
 
 type
   TJSONObjectActionProc = reference to procedure(const AJSONObject
@@ -104,7 +104,8 @@ type
       AJSONObject: TJSONObject; AReaderInstanceOwner: boolean = True);
 {$ENDIF}
     class procedure DataSetToJSONObject(ADataSet: TDataSet;
-      AJSONObject: TJSONObject; ADataSetInstanceOwner: boolean = True);
+      AJSONObject: TJSONObject; ADataSetInstanceOwner: boolean = True;
+      AJSONObjectActionProc: TJSONObjectActionProc = nil);
     class procedure JSONObjectToDataSet(AJSONObject: TJSONObject;
       ADataSet: TDataSet; AJSONObjectInstanceOwner: boolean = True); overload;
     class procedure JSONObjectToDataSet(AJSONObject: TJSONObject;
@@ -122,7 +123,8 @@ type
       AJSONArray: TJSONArray; AReaderInstanceOwner: boolean = True);
 {$ENDIF}
     class procedure DataSetToJSONArray(ADataSet: TDataSet;
-      AJSONArray: TJSONArray; ADataSetInstanceOwner: boolean = True);
+      AJSONArray: TJSONArray; ADataSetInstanceOwner: boolean = True;
+      AJSONObjectActionProc: TJSONObjectActionProc = nil);
     class procedure JSONArrayToDataSet(AJSONArray: TJSONArray;
       ADataSet: TDataSet; AJSONArrayInstanceOwner: boolean = True); overload;
     class procedure JSONArrayToDataSet(AJSONArray: TJSONArray;
@@ -147,7 +149,8 @@ type
     class procedure ExecuteSQLQuery(AQuery: TSQLQuery; AObject: TObject = nil);
     class function ExecuteSQLQueryAsObjectList<T: class, constructor>
       (AQuery: TSQLQuery; AObject: TObject = nil): TObjectList<T>;
-    class function CreateQuery(AConnection: TSQLConnection; ASQL: string): TSQLQuery;
+    class function CreateQuery(AConnection: TSQLConnection; ASQL: string)
+      : TSQLQuery;
 {$ENDIF}
     { FIREDAC RELATED METHODS }
 {$IF CompilerVersion > 25}
@@ -248,7 +251,15 @@ type
   end;
 
   MapperSerializeAsString = class(TCustomAttribute)
+  strict private
+    FEncoding: string;
+    procedure SetEncoding(const Value: string);
 
+  const
+    DefaultEncoding = 'utf-8';
+  public
+    constructor Create(AEncoding: string = DefaultEncoding);
+    property Encoding: string read FEncoding write SetEncoding;
   end;
 
   MapperJSONNaming = class(TCustomAttribute)
@@ -319,7 +330,6 @@ implementation
 
 uses
   TypInfo,
-  SysUtils,
   FmtBcd,
   Math,
   SqlTimSt,
@@ -401,7 +411,6 @@ end;
 // end;
 
 {$IF CompilerVersion <= 25}
-
 
 class function Mapper.InternalExecuteSQLQuery(AQuery: TSQLQuery;
   AObject: TObject; WithResult: boolean): Int64;
@@ -652,18 +661,25 @@ begin
 end;
 {$IFEND}
 
-
 class procedure Mapper.DataSetToJSONArray(ADataSet: TDataSet;
-  AJSONArray: TJSONArray; ADataSetInstanceOwner: boolean);
+  AJSONArray: TJSONArray; ADataSetInstanceOwner: boolean;
+  AJSONObjectActionProc: TJSONObjectActionProc);
 var
   Obj: TJSONObject;
 begin
-  repeat
+  while not ADataSet.Eof do
+  begin
     Obj := TJSONObject.Create;
     AJSONArray.AddElement(Obj);
-    DataSetToJSONObject(ADataSet, Obj, false);
+    DataSetToJSONObject(ADataSet, Obj, false, AJSONObjectActionProc);
     ADataSet.Next;
-  until ADataSet.Eof;
+  end;
+  // repeat
+  // Obj := TJSONObject.Create;
+  // AJSONArray.AddElement(Obj);
+  // DataSetToJSONObject(ADataSet, Obj, false);
+  // ADataSet.Next;
+  // until ADataSet.Eof;
 
   if ADataSetInstanceOwner then
     FreeAndNil(ADataSet);
@@ -683,7 +699,8 @@ begin
 end;
 
 class procedure Mapper.DataSetToJSONObject(ADataSet: TDataSet;
-  AJSONObject: TJSONObject; ADataSetInstanceOwner: boolean);
+  AJSONObject: TJSONObject; ADataSetInstanceOwner: boolean;
+  AJSONObjectActionProc: TJSONObjectActionProc);
 var
   I: Integer;
   key: string;
@@ -739,7 +756,8 @@ begin
           if not ADataSet.Fields[I].IsNull then
           begin
             ts := ADataSet.Fields[I].AsSQLTimeStamp;
-            AJSONObject.AddPair(key, SQLTimeStampToStr('hh:nn:ss', ts));
+            AJSONObject.AddPair(key,
+              SQLTimeStampToStr('yyyy-mm-dd hh:nn:ss', ts));
           end
           else
             AJSONObject.AddPair(key, TJSONNull.Create);
@@ -755,7 +773,7 @@ begin
           else
             AJSONObject.AddPair(key, TJSONNull.Create);
         end;
-      TFieldType.ftFMTBcd:
+      TFieldType.ftBCD, TFieldType.ftFMTBcd:
         begin
           if not ADataSet.Fields[I].IsNull then
           begin
@@ -795,7 +813,8 @@ begin
   end;
   if ADataSetInstanceOwner then
     FreeAndNil(ADataSet);
-
+  if Assigned(AJSONObjectActionProc) then
+    AJSONObjectActionProc(AJSONObject);
 end;
 
 class procedure Mapper.DataSetToObject(ADataSet: TDataSet; AObject: TObject);
@@ -1009,10 +1028,12 @@ var
   I: Integer;
   ThereAreIgnoredProperties: boolean;
   ts: TTimeStamp;
-  sr: TStreamReader;
+  sr: TStringStream;
   SS: TStringStream;
   EncBytes: TBytes;
   enc: TEncoding;
+  _attrser: MapperSerializeAsString;
+  SerEnc: TEncoding;
 begin
   ThereAreIgnoredProperties := Length(AIgnoredProperties) > 0;
   JSONObject := TJSONObject.Create;
@@ -1117,17 +1138,15 @@ begin
             end
             else if o is TStream then
             begin
-              if HasAttribute<MapperSerializeAsString>(_property) then
+              if HasAttribute<MapperSerializeAsString>(_property, _attrser) then
               begin
                 // serialize the stream as a normal string...
                 TStream(o).Position := 0;
-                SetLength(EncBytes, Min(TStream(o).Size, 10));
-                TStream(o).Read(EncBytes, Length(EncBytes));
-                TStream(o).Position := 0;
-                TEncoding.GetBufferEncoding(EncBytes, enc);
-                sr := TStreamReader.Create(TStream(o), enc);
+                SerEnc := TEncoding.GetEncoding(_attrser.Encoding);
+                sr := TStringStream.Create('', SerEnc);
                 try
-                  JSONObject.AddPair(f, sr.ReadToEnd);
+                  sr.LoadFromStream(TStream(o));
+                  JSONObject.AddPair(f, sr.DataString);
                 finally
                   sr.Free;
                 end;
@@ -1152,7 +1171,12 @@ begin
             end;
           end
           else
-            JSONObject.AddPair(f, TJSONNull.Create);
+          begin
+            if HasAttribute<MapperSerializeAsString>(_property) then
+              JSONObject.AddPair(f, '')
+            else
+              JSONObject.AddPair(f, TJSONNull.Create);
+          end;
         end;
     end;
   end;
@@ -1587,8 +1611,10 @@ var
   n: TJSONNumber;
   SerStreamASString: string;
   EncBytes: TBytes;
-  enc: TEncoding;
   sw: TStreamWriter;
+  SS: TStringStream;
+  _attrser: MapperSerializeAsString;
+  SerEnc: TEncoding;
 begin
   jvalue := nil;
   _type := ctx.GetType(AObject.ClassInfo);
@@ -1694,15 +1720,17 @@ begin
                 raise Exception.Create('Expected JSONString in ' +
                   AJSONObject.Get(f).JsonString.Value);
 
-              if HasAttribute<MapperSerializeAsString>(_field) then
+              if HasAttribute<MapperSerializeAsString>(_field, _attrser) then
               begin
                 // serialize the stream as a normal string...
                 TStream(o).Position := 0;
-                sw := TStreamWriter.Create(TStream(o));
+                SerEnc := TEncoding.GetEncoding(_attrser.Encoding);
+                SS := TStringStream.Create(SerStreamASString, SerEnc);
                 try
-                  sw.Write(SerStreamASString);
+                  SS.Position := 0;
+                  TStream(o).CopyFrom(SS, SS.Size);
                 finally
-                  sw.Free;
+                  SS.Free;
                 end;
               end
               else
@@ -2084,7 +2112,6 @@ end;
 
 {$IF CompilerVersion > 25}
 
-
 class procedure Mapper.ObjectToFDParameters(AFDParams: TFDParams;
   AObject: TObject; AParamPrefix: string);
 var
@@ -2199,7 +2226,6 @@ begin
 end;
 {$ENDIF}
 {$IF CompilerVersion <= 25}
-
 
 class function Mapper.ExecuteSQLQueryNoResult(AQuery: TSQLQuery;
   AObject: TObject): Int64;
@@ -2493,6 +2519,22 @@ end;
 procedure TDataSetHelper.LoadFromJSONObjectString(AJSONObjectString: string);
 begin
   LoadFromJSONObjectString(AJSONObjectString, TArray<string>.Create());
+end;
+
+{ MapperSerializeAsString }
+
+constructor MapperSerializeAsString.Create(AEncoding: string);
+begin
+  inherited Create;
+  if AEncoding.IsEmpty then
+    FEncoding := DefaultEncoding
+  else
+    FEncoding := AEncoding;
+end;
+
+procedure MapperSerializeAsString.SetEncoding(const Value: string);
+begin
+  FEncoding := Value;
 end;
 
 end.
