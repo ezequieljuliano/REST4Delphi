@@ -5,10 +5,14 @@ interface
 uses
   System.SysUtils,
   REST4D.Client,
+  MVCFramework,
   MVCFramework.RESTAdapter;
 
 type
 
+  THTTPMethodType = MVCFramework.TMVCHTTPMethodType;
+  THTTPMethods = MVCFramework.TMVCHTTPMethods;
+  HTTPMethodAttribute = MVCFramework.MVCHTTPMethodAttribute;
   RESTResourceAttribute = MVCFramework.RESTAdapter.RESTResourceAttribute;
   BodyAttribute = MVCFramework.RESTAdapter.BodyAttribute;
   ParamAttribute = MVCFramework.RESTAdapter.ParamAttribute;

@@ -9,6 +9,9 @@
         <Projects Include="client\BasicDemoClient.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="client_with_adapter\BasicDemoClientAdapter.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="BasicDemoClient:Make">
         <MSBuild Projects="client\BasicDemoClient.dproj" Targets="Make"/>
     </Target>
+    <Target Name="BasicDemoClientAdapter">
+        <MSBuild Projects="client_with_adapter\BasicDemoClientAdapter.dproj"/>
+    </Target>
+    <Target Name="BasicDemoClientAdapter:Clean">
+        <MSBuild Projects="client_with_adapter\BasicDemoClientAdapter.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BasicDemoClientAdapter:Make">
+        <MSBuild Projects="client_with_adapter\BasicDemoClientAdapter.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="BasicDemoServer;BasicDemoClient"/>
+        <CallTarget Targets="BasicDemoServer;BasicDemoClient;BasicDemoClientAdapter"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="BasicDemoServer:Clean;BasicDemoClient:Clean"/>
+        <CallTarget Targets="BasicDemoServer:Clean;BasicDemoClient:Clean;BasicDemoClientAdapter:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="BasicDemoServer:Make;BasicDemoClient:Make"/>
+        <CallTarget Targets="BasicDemoServer:Make;BasicDemoClient:Make;BasicDemoClientAdapter:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

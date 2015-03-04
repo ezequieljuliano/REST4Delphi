@@ -80,12 +80,10 @@ type
 
   TRESTController = MVCFramework.TMVCController;
   TRESTWebContext = MVCFramework.TWebContext;
-
   THTTPMethodType = MVCFramework.TMVCHTTPMethodType;
   THTTPMethods = MVCFramework.TMVCHTTPMethods;
-
-  StringValueAttribute = MVCFramework.MVCStringAttribute;
   HTTPMethodAttribute = MVCFramework.MVCHTTPMethodAttribute;
+  StringValueAttribute = MVCFramework.MVCStringAttribute;
   ConsumesAttribute = MVCFramework.MVCConsumesAttribute;
   ProducesAttribute = MVCFramework.MVCProducesAttribute;
   PathAttribute = MVCFramework.MVCPathAttribute;
