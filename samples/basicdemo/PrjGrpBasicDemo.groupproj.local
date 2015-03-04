@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-  <Transactions>
-    <Transaction>2014/03/10 09:20:40.678,\\VBOXSVR\d_drive\GitHub\REST4Delphi\samples\basicdemo\PrjGrpBasicDemo.groupproj=C:\Users\Admin\Documents\RAD Studio\Projects\ProjectGroup1.groupproj</Transaction>
-  </Transactions>
-  <Default.Personality>
-    <Projects ActiveProject="\\VBOXSVR\d_drive\GitHub\REST4Delphi\samples\basicdemo\server\BasicDemoServer.dproj"/>
-  </Default.Personality>
-</BorlandProject>

@@ -41,8 +41,20 @@ type
   TRESTCharSetType = class sealed
   public
     const
-    UTF8 = 'utf-8';
     ISO88591 = 'iso-8859-1';
+    ISO88592 = 'iso-8859-2';
+    ISO88593 = 'iso-8859-3';
+    ISO88594 = 'iso-8859-4';
+    ISO88595 = 'iso-8859-5';
+    ISO88596 = 'iso-8859-6';
+    ISO88597 = 'iso-8859-7';
+    ISO88598 = 'iso-8859-8';
+    ISO885915 = 'iso-8859-15';
+    WINDOWS1250 = 'windows-1250';
+    WINDOWS1251 = 'windows-1251';
+    WINDOWS1252 = 'windows-1252';
+    WINDOWS1254 = 'windows-1254';
+    UTF8 = 'utf-8';
   end;
 
   TRESTStatusCode = class sealed
@@ -82,11 +94,6 @@ type
     property ApiKey: string read GetApiKey;
   end;
 
-  TRESTUserAuthenticateFactory = class sealed
-  public
-    class function GetInstance(): IRESTUserAuthenticate; static;
-  end;
-
   IRESTAuthentication = interface
     ['{8A4C9CED-3291-4A43-8634-8FF7F0500778}']
     procedure AddUser(const pUserName, pPassword: string);
@@ -100,9 +107,9 @@ type
     function UserIsValid(const pApiKey: string): Boolean; overload;
   end;
 
-  TRESTUserAuthenticationFactory = class sealed
+  TRESTAuthenticationFactory = class sealed
   public
-    class function GetInstance(): IRESTAuthentication; static;
+    class function Build(): IRESTAuthentication; static;
   end;
 
 implementation
@@ -306,11 +313,11 @@ begin
   Result := EmptyStr;
   if (pSource <> EmptyStr) then
     vMD5 := TIdHashMessageDigest5.Create;
-    try
-      Result := vMD5.HashStringAsHex(pSource, IndyTextEncoding_UTF8);
-    finally
-      FreeAndNil(vMD5);
-    end;
+  try
+    Result := vMD5.HashStringAsHex(pSource, IndyTextEncoding_UTF8);
+  finally
+    FreeAndNil(vMD5);
+  end;
 end;
 
 { TRESTAuthentication }
@@ -319,7 +326,7 @@ procedure TRESTAuthentication.AddUser(const pUserName, pPassword: string);
 var
   vUser: IRESTUserAuthenticate;
 begin
-  vUser := TRESTUserAuthenticateFactory.GetInstance;
+  vUser := TRESTUserAuthenticate.Create;
   vUser.UserName := pUserName;
   vUser.Password := pPassword;
   FUsers.Add(vUser.ApiKey, vUser);
@@ -345,7 +352,7 @@ procedure TRESTAuthentication.RemoveUser(const pUserName, pPassword: string);
 var
   vUser: IRESTUserAuthenticate;
 begin
-  vUser := TRESTUserAuthenticateFactory.GetInstance;
+  vUser := TRESTUserAuthenticate.Create;
   vUser.UserName := pUserName;
   vUser.Password := pPassword;
   RemoveUser(vUser.ApiKey);
@@ -365,22 +372,15 @@ function TRESTAuthentication.UserIsValid(const pUserName, pPassword: string): Bo
 var
   vUser: IRESTUserAuthenticate;
 begin
-  vUser := TRESTUserAuthenticateFactory.GetInstance;
+  vUser := TRESTUserAuthenticate.Create;
   vUser.UserName := pUserName;
   vUser.Password := pPassword;
   Result := UserIsValid(vUser.ApiKey);
 end;
 
-{ TRESTUserAuthenticateFactory }
-
-class function TRESTUserAuthenticateFactory.GetInstance: IRESTUserAuthenticate;
-begin
-  Result := TRESTUserAuthenticate.Create;
-end;
-
 { TRESTUserAuthenticationFactory }
 
-class function TRESTUserAuthenticationFactory.GetInstance: IRESTAuthentication;
+class function TRESTAuthenticationFactory.Build: IRESTAuthentication;
 begin
   Result := TRESTAuthentication.Create;
 end;

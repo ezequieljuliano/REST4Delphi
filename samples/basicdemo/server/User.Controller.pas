@@ -5,34 +5,33 @@ interface
 uses
   REST4D,
   REST4D.Server,
-  MVCFramework,
   System.Generics.Collections,
   System.SysUtils;
 
 type
 
-  [MVCPath('/')]
+  [Path('/')]
   TUserController = class(TRESTController)
   public
-    [MVCPath('/hello')]
-    [MVCHTTPMethod([httpGET])]
-    procedure HelloWorld(ctx: TWebContext);
+    [Path('/hello')]
+    [HTTPMethod([THTTPMethodType.httpGET])]
+    procedure HelloWorld(ctx: TRESTWebContext);
 
-    [MVCPath('/user')]
-    [MVCHTTPMethod([httpGET])]
-    procedure GetUser(ctx: TWebContext);
+    [Path('/user')]
+    [HTTPMethod([THTTPMethodType.httpGET])]
+    procedure GetUser(ctx: TRESTWebContext);
 
-    [MVCPath('/user/save')]
-    [MVCHTTPMethod([httpPOST])]
-    procedure PostUser(ctx: TWebContext);
+    [Path('/user/save')]
+    [HTTPMethod([THTTPMethodType.httpPOST])]
+    procedure PostUser(ctx: TRESTWebContext);
 
-    [MVCPath('/users')]
-    [MVCHTTPMethod([httpGET])]
-    procedure GetUsers(ctx: TWebContext);
+    [Path('/users')]
+    [HTTPMethod([THTTPMethodType.httpGET])]
+    procedure GetUsers(ctx: TRESTWebContext);
 
-    [MVCPath('/users/save')]
-    [MVCHTTPMethod([httpPOST])]
-    procedure PostUsers(ctx: TWebContext);
+    [Path('/users/save')]
+    [HTTPMethod([THTTPMethodType.httpPOST])]
+    procedure PostUsers(ctx: TRESTWebContext);
   end;
 
 implementation
@@ -42,7 +41,7 @@ uses
 
 { TAppController }
 
-procedure TUserController.GetUser(ctx: TWebContext);
+procedure TUserController.GetUser(ctx: TRESTWebContext);
 var
   vUser: TUser;
 begin
@@ -54,7 +53,7 @@ begin
   Render(vUser);
 end;
 
-procedure TUserController.GetUsers(ctx: TWebContext);
+procedure TUserController.GetUsers(ctx: TRESTWebContext);
 var
   vUsers: TObjectList<TUser>;
   vUser: TUser;
@@ -75,12 +74,12 @@ begin
   Render<TUser>(vUsers);
 end;
 
-procedure TUserController.HelloWorld(ctx: TWebContext);
+procedure TUserController.HelloWorld(ctx: TRESTWebContext);
 begin
   Render('Hello World called with GET');
 end;
 
-procedure TUserController.PostUser(ctx: TWebContext);
+procedure TUserController.PostUser(ctx: TRESTWebContext);
 var
   vUser: TUser;
 begin
@@ -94,7 +93,7 @@ begin
   FreeAndNil(vUser);
 end;
 
-procedure TUserController.PostUsers(ctx: TWebContext);
+procedure TUserController.PostUsers(ctx: TRESTWebContext);
 var
   vUsers: TObjectList<TUser>;
 begin

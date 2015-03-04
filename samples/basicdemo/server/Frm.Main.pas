@@ -12,7 +12,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
-    FServerContainer: IRESTServerContainer;
+
   public
     { Public declarations }
   end;
@@ -32,21 +32,20 @@ procedure TFrmMain.FormCreate(Sender: TObject);
 var
   vServerInfo: IRESTServerInfo;
 begin
-  vServerInfo := TRESTServerInfoFactory.GetInstance;
+  vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerBasicDemo';
   vServerInfo.Port := 3000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := BasicDemoWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  FServerContainer := TRESTServerContainerFactory.GetSingleton;
-  FServerContainer.CreateServer(vServerInfo);
-  FServerContainer.StartServers;
+  RESTServerContainer.CreateServer(vServerInfo);
+  RESTServerContainer.StartServers;
 end;
 
 procedure TFrmMain.FormDestroy(Sender: TObject);
 begin
-  FServerContainer.StopServers;
+  RESTServerContainer.StopServers;
 end;
 
 end.

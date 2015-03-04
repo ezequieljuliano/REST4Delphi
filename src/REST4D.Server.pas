@@ -48,7 +48,7 @@ type
 
   TRESTServerInfoFactory = class sealed
   public
-    class function GetInstance(): IRESTServerInfo; static;
+    class function Build(): IRESTServerInfo; static;
   end;
 
   IRESTServer = interface
@@ -78,18 +78,17 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
-  TRESTServerContainerFactory = class sealed
-  strict private
-    class var GlobalCriticalSection: TCriticalSection;
-    class var SingletonServerContainer: IRESTServerContainer;
+  TRESTController = MVCFramework.TMVCController;
+  TRESTWebContext = MVCFramework.TWebContext;
 
-    class constructor Create;
-    class destructor Destroy;
-  public
-    class function GetSingleton(): IRESTServerContainer; static;
-  end;
+  THTTPMethodType = MVCFramework.TMVCHTTPMethodType;
+  THTTPMethods = MVCFramework.TMVCHTTPMethods;
 
-  TRESTController = class(TMVCController);
+  StringValueAttribute = MVCFramework.MVCStringAttribute;
+  HTTPMethodAttribute = MVCFramework.MVCHTTPMethodAttribute;
+  ConsumesAttribute = MVCFramework.MVCConsumesAttribute;
+  ProducesAttribute = MVCFramework.MVCProducesAttribute;
+  PathAttribute = MVCFramework.MVCPathAttribute;
 
   TRESTEngine = class(TMVCEngine)
   strict private
@@ -102,9 +101,22 @@ type
     property ServerName: string read FServerName write FServerName;
   end;
 
+function RESTServerContainer(): IRESTServerContainer;
+
 implementation
 
 type
+
+  TRESTSingletonServerContainer = class sealed
+  strict private
+    class var CriticalSection: TCriticalSection;
+    class var ServerContainer: IRESTServerContainer;
+
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function GetInstance(): IRESTServerContainer; static;
+  end;
 
   TRESTServerInfo = class(TInterfacedObject, IRESTServerInfo)
   strict private
@@ -182,7 +194,12 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
-  { TRESTEngine }
+function RESTServerContainer(): IRESTServerContainer;
+begin
+  Result := TRESTSingletonServerContainer.GetInstance();
+end;
+
+{ TRESTEngine }
 
 function TRESTEngine.Authenticate(const pRequest: TWebRequest): Boolean;
   function ContainsAuthorization(): Boolean;
@@ -263,12 +280,12 @@ end;
 
 function TRESTEngine.GetServerAuthentication: IRESTAuthentication;
 begin
-  Result := TRESTServerContainerFactory.GetSingleton.FindServerByName(FServerName).Info.Authentication;
+  Result := RESTServerContainer.FindServerByName(FServerName).Info.Authentication;
 end;
 
 { TRESTServerInfoFactory }
 
-class function TRESTServerInfoFactory.GetInstance: IRESTServerInfo;
+class function TRESTServerInfoFactory.Build: IRESTServerInfo;
 begin
   Result := TRESTServerInfo.Create;
 end;
@@ -282,7 +299,7 @@ begin
   FMaxConnections := 0;
   FWebModuleClass := nil;
   FBridge := TRESTBridge.rbIndy;
-  FAuthentication := TRESTUserAuthenticationFactory.GetInstance;
+  FAuthentication := TRESTAuthenticationFactory.Build();
 end;
 
 destructor TRESTServerInfo.Destroy;
@@ -497,30 +514,30 @@ end;
 
 { TRESTServerContainerFactory }
 
-class constructor TRESTServerContainerFactory.Create;
+class constructor TRESTSingletonServerContainer.Create;
 begin
-  GlobalCriticalSection := TCriticalSection.Create();
-  SingletonServerContainer := nil;
+  CriticalSection := TCriticalSection.Create();
+  ServerContainer := nil;
 end;
 
-class destructor TRESTServerContainerFactory.Destroy;
+class destructor TRESTSingletonServerContainer.Destroy;
 begin
-  SingletonServerContainer := nil;
-  FreeAndNil(GlobalCriticalSection);
+  ServerContainer := nil;
+  FreeAndNil(CriticalSection);
 end;
 
-class function TRESTServerContainerFactory.GetSingleton: IRESTServerContainer;
+class function TRESTSingletonServerContainer.GetInstance: IRESTServerContainer;
 begin
-  if (SingletonServerContainer = nil) then
+  if (ServerContainer = nil) then
   begin
-    GlobalCriticalSection.Enter;
+    CriticalSection.Enter;
     try
-      SingletonServerContainer := TRESTServerContainer.Create;
+      ServerContainer := TRESTServerContainer.Create;
     finally
-      GlobalCriticalSection.Leave;
+      CriticalSection.Leave;
     end;
   end;
-  Result := SingletonServerContainer;
+  Result := ServerContainer;
 end;
 
 end.

@@ -23,7 +23,8 @@ uses
   REST4D.WebModule in '..\src\REST4D.WebModule.pas' {RESTWebModule: TWebModule},
   REST4D.Tests.AppWebModule in 'REST4D.Tests.AppWebModule.pas' {AppWebModule: TWebModule},
   REST4D.Tests.AppController in 'REST4D.Tests.AppController.pas',
-  REST4D.Tests.TempWebModule in 'REST4D.Tests.TempWebModule.pas' {TempWebModule: TWebModule};
+  REST4D.Tests.TempWebModule in 'REST4D.Tests.TempWebModule.pas' {TempWebModule: TWebModule},
+  REST4D.Adapter in '..\src\REST4D.Adapter.pas';
 
 {$R *.RES}
 

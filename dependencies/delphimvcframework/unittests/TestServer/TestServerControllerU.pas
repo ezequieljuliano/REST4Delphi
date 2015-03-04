@@ -59,6 +59,24 @@ type
     [MVCProduces('text/plain')]
     procedure TestConsumesProducesText(ctx: TWebContext);
 
+    [MVCPath('/testconsumejson')]
+    [MVCHTTPMethod([httpGET])]
+    [MVCConsumes('application/json')]
+    [MVCProduces('application/json', 'utf-8')]
+    procedure TestConsumeJSON(ctx: TWebContext);
+
+    [MVCPath('/people/($id)')]
+    [MVCHTTPMethod([httpGET])]
+    procedure TestGetPersonByID(ctx: TWebContext);
+
+    [MVCPath('/people/($id)/asfields')]
+    [MVCHTTPMethod([httpGET])]
+    procedure TestGetPersonByIDAsFields(ctx: TWebContext);
+
+    [MVCPath('/people')]
+    [MVCHTTPMethod([httpGET, httpPOST, httpPUT])]
+    procedure TestGetPersons(ctx: TWebContext);
+
     [MVCPath('/objects')]
     [MVCHTTPMethod([httpPOST, httpPUT])]
     [MVCProduces('application/json')]
@@ -81,8 +99,8 @@ uses
 {$ELSE}
   System.JSON,
 {$IFEND}
-  MVCFramework.Commons,
-  Web.HTTPApp, BusinessObjectsU;
+  MVCFramework.Commons, Web.HTTPApp, BusinessObjectsU, Generics.Collections,
+  SysUtils;
 
 { TTestServerController }
 
@@ -113,11 +131,11 @@ end;
 
 procedure TTestServerController.EchoBody(ctx: TWebContext);
 var
-  json: TJSONObject;
+  JSON: TJSONObject;
 begin
-  json := ctx.Request.BodyAsJSONObject.Clone as TJSONObject;
-  json.AddPair('echo', 'from server');
-  Render(json);
+  JSON := ctx.Request.BodyAsJSONObject.Clone as TJSONObject;
+  JSON.AddPair('echo', 'from server');
+  Render(JSON);
 end;
 
 procedure TTestServerController.EchoHeaders(ctx: TWebContext);
@@ -171,10 +189,8 @@ end;
 
 procedure TTestServerController.ReqWithParams(ctx: TWebContext);
 begin
-  Render(TJSONObject.Create.AddPair('par1', ctx.Request.Params['par1'])
-    .AddPair('par2', ctx.Request.Params['par2']).AddPair('par3',
-    ctx.Request.Params['par3']).AddPair('method',
-    ctx.Request.HTTPMethodAsString));
+  Render(TJSONObject.Create.AddPair('par1', ctx.Request.Params['par1']).AddPair('par2', ctx.Request.Params['par2']).AddPair('par3',
+    ctx.Request.Params['par3']).AddPair('method', ctx.Request.HTTPMethodAsString));
 end;
 
 procedure TTestServerController.SessionGet(ctx: TWebContext);
@@ -189,6 +205,11 @@ end;
 procedure TTestServerController.SessionSet(ctx: TWebContext);
 begin
   Session['value'] := ctx.Request.Params['value'];
+end;
+
+procedure TTestServerController.TestConsumeJSON(ctx: TWebContext);
+begin
+  Render(TJSONObject.ParseJSONValue('{"key":"Hello World"}'));
 end;
 
 procedure TTestServerController.TestConsumesProduces(ctx: TWebContext);
@@ -211,6 +232,52 @@ begin
   Obj.AddPair('name2', 'to je Unicode?');
   Obj.AddPair('name3', 'אטילעש');
   Render(Obj);
+end;
+
+procedure TTestServerController.TestGetPersonByID(ctx: TWebContext);
+var
+  PersonList: TObjectList<TPerson>;
+  ID: integer;
+begin
+  ID := ctx.Request.Params['id'].ToInteger;
+  PersonList := TPerson.GetList;
+  try
+    Render(PersonList[ID - 1], false);
+  finally
+    PersonList.Free;
+  end;
+end;
+
+procedure TTestServerController.TestGetPersonByIDAsFields(ctx: TWebContext);
+var
+  PersonList: TObjectList<TPerson>;
+  ID: integer;
+begin
+  ID := ctx.Request.Params['id'].ToInteger;
+  PersonList := TPerson.GetList;
+  try
+    Render(PersonList[ID - 1], false, TDMVCSerializationType.Fields);
+  finally
+    PersonList.Free;
+  end;
+end;
+
+procedure TTestServerController.TestGetPersons(ctx: TWebContext);
+var
+  Person: TPerson;
+begin
+  case ctx.Request.HTTPMethod of
+    httpGET:
+      Render<TPerson>(TPerson.GetList);
+    httpPOST:
+      begin
+        Person := ctx.Request.BodyAs<TPerson>();
+        Render(Person);
+      end;
+    httpPUT:
+      ;
+  end;
+
 end;
 
 procedure TTestServerController.TestMultiplePaths(ctx: TWebContext);

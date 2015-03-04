@@ -9,11 +9,11 @@ uses
   System.Generics.Collections,
   System.SysUtils,
   System.StrUtils,
-{$IF CompilerVersion < 27}
+  {$IF CompilerVersion < 27}
   Data.DBXJSON,
-{$ELSE}
+  {$ELSE}
   System.JSON,
-{$IFEND}
+  {$IFEND}
   IdURI;
 
 type
@@ -77,6 +77,8 @@ type
     function PUT<TBodyType: class>(const pBody: TObjectList<TBodyType>; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
 
     function DELETE(): TRESTfulResponse; overload;
+
+    property DefaultClient: TRESTClient read FRESTClient;
   end;
 
 implementation
@@ -168,8 +170,10 @@ end;
 
 destructor TRESTfulClient.Destroy;
 begin
-  FreeAndNil(FRESTClient);
-  FreeAndNil(FRESTResponse);
+  if (FRESTClient <> nil) then
+    FreeAndNil(FRESTClient);
+  if (FRESTResponse <> nil) then
+    FreeAndNil(FRESTResponse);
   inherited;
 end;
 

@@ -9,14 +9,41 @@ uses
   REST4D,
   REST4D.Server,
   REST4D.Client,
+  REST4D.Adapter,
   REST4D.Tests.AppWebModule,
-  System.Generics.Collections;
+  REST4D.Tests.AppController,
+  REST4D.Tests.TempWebModule,
+  System.Generics.Collections,
+  ObjectsMappers;
 
 type
 
+  IAppResource = interface(IInvokable)
+    ['{D139CD79-CFE5-49E3-8CFB-27686621911B}']
+
+    [RESTResource(THTTPMethodType.httpGET, '/hello')]
+    function HelloWorld(): string;
+
+    [RESTResource(THTTPMethodType.httpGET, '/user')]
+    function GetUser(): TUser;
+
+    [RESTResource(THTTPMethodType.httpPOST, '/user/save')]
+    procedure PostUser([Body] pBody: TUser);
+
+    [RESTResource(THTTPMethodType.httpGET, '/users')]
+    [MapperListOf(TUser)]
+    function GetUsers(): TObjectList<TUser>;
+
+    [RESTResource(THTTPMethodType.httpPOST, '/users/save')]
+    procedure PostUsers([Body] pBody: TObjectList<TUser>);
+
+  end;
+
   TTestREST4D = class(TTestCase)
   private
-    FServerContainer: IRESTServerContainer;
+    FRESTfulClient: TRESTfulClient;
+    FRESTAdapter: TRESTAdapter<IAppResource>;
+    FAppResource: IAppResource;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -34,10 +61,6 @@ type
 
 implementation
 
-uses
-  REST4D.Tests.AppController,
-  REST4D.Tests.TempWebModule;
-
 { TTestREST4D }
 
 procedure TTestREST4D.SetUp;
@@ -45,226 +68,213 @@ var
   vServerInfo: IRESTServerInfo;
 begin
   inherited;
-  vServerInfo := TRESTServerInfoFactory.GetInstance;
+  vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'Server1';
   vServerInfo.Port := 3000;
   vServerInfo.MaxConnections := 1024;
-  vServerInfo.Bridge := TRESTBridge.rbIndy;
+  vServerInfo.Bridge := TRESTBridge.rbIOCP;
   vServerInfo.WebModuleClass := AppWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  FServerContainer := TRESTServerContainerFactory.GetSingleton;
-  FServerContainer.CreateServer(vServerInfo);
-  FServerContainer.StartServers;
+  RESTServerContainer.CreateServer(vServerInfo);
+  RESTServerContainer.StartServers;
+
+  FRESTfulClient := TRESTfulClient.Create('localhost', 3000);
+  FRESTAdapter := TRESTAdapter<IAppResource>.Create;
+  FRESTAdapter.Build(FRESTfulClient);
+  FAppResource := FRESTAdapter.ResourcesService;
 end;
 
 procedure TTestREST4D.TearDown;
 begin
   inherited;
-  FServerContainer.StopServers;
+  RESTServerContainer.StopServers;
+  FreeAndNil(FRESTfulClient);
 end;
 
 procedure TTestREST4D.TestCreateServer;
 var
-  vServerContainer: IRESTServerContainer;
   vServerInfo: IRESTServerInfo;
 begin
-  vServerInfo := TRESTServerInfoFactory.GetInstance;
+  vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerTemp';
   vServerInfo.Port := 4000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := TempWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  vServerContainer := TRESTServerContainerFactory.GetSingleton;
-  vServerContainer.CreateServer(vServerInfo);
+  RESTServerContainer.CreateServer(vServerInfo);
 
-  CheckTrue(vServerContainer.FindServerByName('ServerTemp') <> nil);
+  CheckTrue(RESTServerContainer.FindServerByName('ServerTemp') <> nil);
 end;
 
 procedure TTestREST4D.TestDestroyServer;
 var
-  vServerContainer: IRESTServerContainer;
   vServerInfo: IRESTServerInfo;
 begin
-  vServerInfo := TRESTServerInfoFactory.GetInstance;
+  vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerTemp';
   vServerInfo.Port := 4000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := TempWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  vServerContainer := TRESTServerContainerFactory.GetSingleton;
-  vServerContainer.CreateServer(vServerInfo);
-  vServerContainer.DestroyServer('ServerTemp');
+  RESTServerContainer.CreateServer(vServerInfo);
+  RESTServerContainer.DestroyServer('ServerTemp');
 
-  CheckTrue(vServerContainer.FindServerByName('ServerTemp') = nil);
+  CheckTrue(RESTServerContainer.FindServerByName('ServerTemp') = nil);
 end;
 
 procedure TTestREST4D.TestFindServerByName;
 var
-  vServerContainer: IRESTServerContainer;
   vServerInfo: IRESTServerInfo;
 begin
-  vServerInfo := TRESTServerInfoFactory.GetInstance;
+  vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerTemp';
   vServerInfo.Port := 4000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := TempWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  vServerContainer := TRESTServerContainerFactory.GetSingleton;
-  vServerContainer.CreateServer(vServerInfo);
+  RESTServerContainer.CreateServer(vServerInfo);
 
-  CheckTrue(vServerContainer.FindServerByName('ServerTemp') <> nil);
+  CheckTrue(RESTServerContainer.FindServerByName('ServerTemp') <> nil);
 end;
 
 procedure TTestREST4D.TestGetUser;
 var
-  vRestCli: TRESTfulClient;
   vUser: TUser;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  FRESTfulClient.Resource('/user').Params([]);
+  FRESTfulClient.Authorization('ezequiel', '123');
+
+  // String
+  vResp := FRESTfulClient.GET;
+  CheckTrue(
+    ('{"Cod":1,"Name":"Ezequiel","Pass":"123"}' = vResp.AsString) and
+    (vResp.StatusCode = 200)
+    );
+
+  // Object
+  vUser := FRESTfulClient.GET.AsObject<TUser>();
   try
-    vRestCli.Resource('/user').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
-
-    vResp := vRestCli.GET;
-
-    CheckTrue(
-      ('{"Cod":1,"Name":"Ezequiel","Pass":"123"}' = vResp.AsString) and
-      (vResp.StatusCode = 200)
-      );
+    CheckTrue((vUser <> nil) and (vUser.Cod > 0));
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vUser);
   end;
 
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  // Adapter
+  vUser := FAppResource.GetUser;
   try
-    vRestCli.Resource('/user').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
-
-    vUser := vRestCli.GET.AsObject<TUser>();
-
     CheckTrue((vUser <> nil) and (vUser.Cod > 0));
-
-    FreeAndNil(vUser);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vUser);
   end;
 end;
 
 procedure TTestREST4D.TestGetUsers;
 var
-  vRestCli: TRESTfulClient;
   vUsers: TObjectList<TUser>;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  FRESTfulClient.Resource('/users').Params([]);
+  FRESTfulClient.Authorization('ezequiel', '123');
+
+  // String
+  CheckEqualsString('[{"Cod":0,"Name":"Ezequiel 0","Pass":"0"},{"Cod":1,"Name":"Ezequiel 1","Pass":"1"},' +
+    '{"Cod":2,"Name":"Ezequiel 2","Pass":"2"},{"Cod":3,"Name":"Ezequiel 3","Pass":"3"},{"Cod":4,"Name":"Ezequiel 4","Pass":"4"},' +
+    '{"Cod":5,"Name":"Ezequiel 5","Pass":"5"},{"Cod":6,"Name":"Ezequiel 6","Pass":"6"},{"Cod":7,"Name":"Ezequiel 7","Pass":"7"},' +
+    '{"Cod":8,"Name":"Ezequiel 8","Pass":"8"},{"Cod":9,"Name":"Ezequiel 9","Pass":"9"},{"Cod":10,"Name":"Ezequiel 10","Pass":"10"}]',
+    FRESTfulClient.GET.AsString);
+
+  // Objects
+  vUsers := FRESTfulClient.GET.AsObjectList<TUser>;
   try
-    vRestCli.Resource('/users').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
-    CheckEqualsString('[{"Cod":0,"Name":"Ezequiel 0","Pass":"0"},{"Cod":1,"Name":"Ezequiel 1","Pass":"1"},' +
-      '{"Cod":2,"Name":"Ezequiel 2","Pass":"2"},{"Cod":3,"Name":"Ezequiel 3","Pass":"3"},{"Cod":4,"Name":"Ezequiel 4","Pass":"4"},' +
-      '{"Cod":5,"Name":"Ezequiel 5","Pass":"5"},{"Cod":6,"Name":"Ezequiel 6","Pass":"6"},{"Cod":7,"Name":"Ezequiel 7","Pass":"7"},' +
-      '{"Cod":8,"Name":"Ezequiel 8","Pass":"8"},{"Cod":9,"Name":"Ezequiel 9","Pass":"9"},{"Cod":10,"Name":"Ezequiel 10","Pass":"10"}]',
-      vRestCli.GET.AsString);
+    vUsers.OwnsObjects := True;
+    CheckTrue(vUsers.Count > 0);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vUsers);
   end;
 
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  // Adapter
+  vUsers := FAppResource.GetUsers;
   try
-    vRestCli.Resource('/users').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
-
-    vUsers := vRestCli.GET.AsObjectList<TUser>;
     vUsers.OwnsObjects := True;
-
     CheckTrue(vUsers.Count > 0);
-
-    FreeAndNil(vUsers);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vUsers);
   end;
 end;
 
 procedure TTestREST4D.TestHelloWorld;
-var
-  vRestCli: TRESTfulClient;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
-  try
-    vRestCli.Resource('/hello').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+  FRESTfulClient.Resource('/hello').Params([]);
+  FRESTfulClient.Authorization('ezequiel', '123');
 
-    CheckEqualsString('"Hello World called with GET"', vRestCli.GET.AsString);
-  finally
-    FreeAndNil(vRestCli);
-  end;
+  // String
+  CheckEqualsString('"Hello World called with GET"', FRESTfulClient.GET.AsString);
+
+  // Adapter
+  CheckEqualsString('"Hello World called with GET"', FAppResource.HelloWorld);
 end;
 
 procedure TTestREST4D.TestPostUser;
 var
-  vRestCli: TRESTfulClient;
   vUser: TUser;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
-  try
-    vRestCli.Resource('/user/save').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+  FRESTfulClient.Resource('/user/save').Params([]);
+  FRESTfulClient.Authorization('ezequiel', '123');
 
-    vUser := TUser.Create;
-    vUser.Cod := 1;
-    vUser.Name := 'Ezequiel';
-    vUser.Pass := '123';
+  vUser := TUser.Create;
+  vUser.Cod := 1;
+  vUser.Name := 'Ezequiel';
+  vUser.Pass := '123';
+  vResp := FRESTfulClient.POST<TUser>(vUser);
+  CheckTrue(('"Sucess!"' = vResp.AsString) and (vResp.StatusCode = 200));
 
-    vResp := vRestCli.POST<TUser>(vUser);
-
-    CheckTrue(
-      ('"Sucess!"' = vResp.AsString) and (vResp.StatusCode = 200)
-      );
-  finally
-    FreeAndNil(vRestCli);
-  end;
+  // Adapter
+  vUser := TUser.Create;
+  vUser.Cod := 1;
+  vUser.Name := 'Ezequiel';
+  vUser.Pass := '123';
+  FAppResource.PostUser(vUser);
 end;
 
 procedure TTestREST4D.TestPostUsers;
 var
-  vRestCli: TRESTfulClient;
   vUsers: TObjectList<TUser>;
   vResp: TRESTfulResponse;
   I: Integer;
   vUser: TUser;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
-  try
-    vRestCli.Resource('/users/save').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
-    vRestCli.ContentType('application/json; charset=utf-8');
+  FRESTfulClient.Resource('/users/save').Params([]);
+  FRESTfulClient.Authorization('ezequiel', '123');
+  FRESTfulClient.ContentType('application/json; charset=utf-8');
 
-    vUsers := TObjectList<TUser>.Create(True);
-
-    for I := 0 to 10 do
-    begin
-      vUser := TUser.Create;
-      vUser.Cod := I;
-      vUser.Name := 'Ezequiel ˆ¸·‡Á„ı∫s ' + IntToStr(I);
-      vUser.Pass := IntToStr(I);
-
-      vUsers.Add(vUser);
-    end;
-
-    vResp := vRestCli.POST<TUser>(vUsers);
-
-    CheckTrue(
-      ('"Sucess!"' = vResp.AsString) and (vResp.StatusCode = 200)
-      );
-
-  finally
-    FreeAndNil(vRestCli);
+  vUsers := TObjectList<TUser>.Create(True);
+  for I := 0 to 10 do
+  begin
+    vUser := TUser.Create;
+    vUser.Cod := I;
+    vUser.Name := 'Ezequiel ˆ¸·‡Á„ı∫s ' + IntToStr(I);
+    vUser.Pass := IntToStr(I);
+    vUsers.Add(vUser);
   end;
+  vResp := FRESTfulClient.POST<TUser>(vUsers);
+  CheckTrue(('"Sucess!"' = vResp.AsString) and (vResp.StatusCode = 200));
+
+  // Adapter
+  vUsers := TObjectList<TUser>.Create(True);
+  for I := 0 to 10 do
+  begin
+    vUser := TUser.Create;
+    vUser.Cod := I;
+    vUser.Name := 'Ezequiel ˆ¸·‡Á„ı∫s ' + IntToStr(I);
+    vUser.Pass := IntToStr(I);
+    vUsers.Add(vUser);
+  end;
+  FAppResource.PostUsers(vUsers);
 end;
 
 initialization
