@@ -42,94 +42,94 @@ uses
 
 procedure TFrmMainClient.Button1Click(Sender: TObject);
 var
-  vRestCli: TRESTfulClient;
+  vRESTfulClient: TRESTfulClient;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
-    vRestCli.Resource('/user').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+    vRESTfulClient.Resource('/user').Params([]);
+    vRESTfulClient.Authorization('ezequiel', '123');
 
-    vResp := vRestCli.GET;
+    vResp := vRESTfulClient.GET;
 
     MemResp.Lines.Add(vResp.AsString);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vRESTfulClient);
   end;
 end;
 
 procedure TFrmMainClient.Button2Click(Sender: TObject);
 var
-  vRestCli: TRESTfulClient;
+  vRESTfulClient: TRESTfulClient;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
-    vRestCli.Resource('/users').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+    vRESTfulClient.Resource('/users').Params([]);
+    vRESTfulClient.Authorization('ezequiel', '123');
 
-    vResp := vRestCli.GET;
+    vResp := vRESTfulClient.GET;
 
     MemResp.Lines.Add(vResp.AsString);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vRESTfulClient);
   end;
 end;
 
 procedure TFrmMainClient.Button3Click(Sender: TObject);
 var
-  vRestCli: TRESTfulClient;
+  vRESTfulClient: TRESTfulClient;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
-    vRestCli.Resource('/hello').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+    vRESTfulClient.Resource('/hello').Params([]);
+    vRESTfulClient.Authorization('ezequiel', '123');
 
-    vResp := vRestCli.GET;
+    vResp := vRESTfulClient.GET;
 
     MemResp.Lines.Add(vResp.AsString);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vRESTfulClient);
   end;
 end;
 
 procedure TFrmMainClient.Button4Click(Sender: TObject);
 var
-  vRestCli: TRESTfulClient;
+  vRESTfulClient: TRESTfulClient;
   vUser: TUser;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
-    vRestCli.Resource('/user/save').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+    vRESTfulClient.Resource('/user/save').Params([]);
+    vRESTfulClient.Authorization('ezequiel', '123');
 
     vUser := TUser.Create;
     vUser.Cod := 1;
     vUser.Name := 'Ezequiel';
     vUser.Pass := '123';
 
-    vResp := vRestCli.POST<TUser>(vUser);
+    vResp := vRESTfulClient.POST<TUser>(vUser);
 
     MemResp.Lines.Add(vResp.AsString);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vRESTfulClient);
   end;
 end;
 
 procedure TFrmMainClient.Button5Click(Sender: TObject);
 var
-  vRestCli: TRESTfulClient;
+  vRESTfulClient: TRESTfulClient;
   vUsers: TObjectList<TUser>;
   vResp: TRESTfulResponse;
   I: Integer;
   vUser: TUser;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
-    vRestCli.Resource('/users/save').Params([]);
-    vRestCli.Authorization('ezequiel', '123');
+    vRESTfulClient.Resource('/users/save').Params([]);
+    vRESTfulClient.Authorization('ezequiel', '123');
 
     vUsers := TObjectList<TUser>.Create(True);
 
@@ -143,29 +143,29 @@ begin
       vUsers.Add(vUser);
     end;
 
-    vResp := vRestCli.POST<TUser>(vUsers);
+    vResp := vRESTfulClient.POST<TUser>(vUsers);
 
     MemResp.Lines.Add(vResp.AsString);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vRESTfulClient);
   end;
 end;
 
 procedure TFrmMainClient.Button6Click(Sender: TObject);
 var
-  vRestCli: TRESTfulClient;
+  vRESTfulClient: TRESTfulClient;
   vResp: TRESTfulResponse;
 begin
-  vRestCli := TRESTfulClient.Create('localhost', 3000);
+  vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
-    vRestCli.Resource('/user').Params([]);
-    vRestCli.Authorization('123', '123');
+    vRESTfulClient.Resource('/user').Params([]);
+    vRESTfulClient.Authorization('123', '123');
 
-    vResp := vRestCli.GET;
+    vResp := vRESTfulClient.GET;
 
     MemResp.Lines.Add(vResp.AsString);
   finally
-    FreeAndNil(vRestCli);
+    FreeAndNil(vRESTfulClient);
   end;
 end;
 

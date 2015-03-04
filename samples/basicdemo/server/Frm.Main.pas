@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, REST4D, REST4D.Server;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs;
 
 type
 
@@ -23,10 +23,10 @@ var
 implementation
 
 uses
+  REST4D, REST4D.Server,
   BasicDemo.AppWebModule;
 
 {$R *.dfm}
-
 
 procedure TFrmMain.FormCreate(Sender: TObject);
 var

@@ -13,7 +13,6 @@ type
 
   IUserResource = interface(IInvokable)
     ['{BF864FFF-7EB6-4A07-812E-EAC80F7AE0C9}']
-
     [RESTResource(THTTPMethodType.httpGET, '/hello')]
     function HelloWorld(): string;
 
@@ -29,7 +28,6 @@ type
 
     [RESTResource(THTTPMethodType.httpPOST, '/users/save')]
     procedure PostUsers([Body] pBody: TObjectList<TUser>);
-
   end;
 
 implementation
