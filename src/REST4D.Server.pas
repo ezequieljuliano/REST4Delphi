@@ -53,7 +53,7 @@ type
 
   IRESTServer = interface
     ['{95E91DF0-6ABF-46B1-B995-FC748BC54568}']
-    procedure Initialize(const pServerInfo: IRESTServerInfo);
+    procedure Initialize(pServerInfo: IRESTServerInfo);
 
     function GetInfo(): IRESTServerInfo;
 
@@ -65,7 +65,7 @@ type
 
   IRESTServerContainer = interface
     ['{B20796A0-CB07-4D16-BEAB-4F0B10880318}']
-    procedure CreateServer(const pServerInfo: IRESTServerInfo);
+    procedure CreateServer(pServerInfo: IRESTServerInfo);
     procedure DestroyServer(const pServerName: string);
 
     function GetServers(): TDictionary<string, IRESTServer>;
@@ -92,14 +92,28 @@ type
   strict private
     FServerName: string;
     function GetServerAuthentication(): IRESTAuthentication;
-    function Authenticate(const pRequest: TWebRequest): Boolean;
+    function Authenticate(pRequest: TWebRequest): Boolean;
   protected
     function ExecuteAction(Sender: TObject; Request: TWebRequest; Response: TWebResponse): Boolean; override;
   public
     property ServerName: string read FServerName write FServerName;
   end;
 
-function RESTServerContainer(): IRESTServerContainer;
+  RESTServer = class sealed
+  strict private
+  const
+    CanNotBeInstantiatedException = 'This class can not be instantiated!';
+  strict private
+
+    {$HINTS OFF}
+
+    constructor Create;
+
+    {$HINTS ON}
+
+  public
+    class function Container(): IRESTServerContainer; static;
+  end;
 
 implementation
 
@@ -162,7 +176,7 @@ type
     constructor Create();
     destructor Destroy(); override;
 
-    procedure Initialize(const pServerInfo: IRESTServerInfo);
+    procedure Initialize(pServerInfo: IRESTServerInfo);
 
     function GetInfo(): IRESTServerInfo;
 
@@ -179,7 +193,7 @@ type
     constructor Create();
     destructor Destroy(); override;
 
-    procedure CreateServer(const pServerInfo: IRESTServerInfo);
+    procedure CreateServer(pServerInfo: IRESTServerInfo);
     procedure DestroyServer(const pServerName: string);
 
     function GetServers(): TDictionary<string, IRESTServer>;
@@ -192,14 +206,9 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
-function RESTServerContainer(): IRESTServerContainer;
-begin
-  Result := TRESTSingletonServerContainer.GetInstance();
-end;
+  { TRESTEngine }
 
-{ TRESTEngine }
-
-function TRESTEngine.Authenticate(const pRequest: TWebRequest): Boolean;
+function TRESTEngine.Authenticate(pRequest: TWebRequest): Boolean;
   function ContainsAuthorization(): Boolean;
   begin
     try
@@ -278,7 +287,7 @@ end;
 
 function TRESTEngine.GetServerAuthentication: IRESTAuthentication;
 begin
-  Result := RESTServerContainer.FindServerByName(FServerName).Info.Authentication;
+  Result := RESTServer.Container.FindServerByName(FServerName).Info.Authentication;
 end;
 
 { TRESTServerInfoFactory }
@@ -398,7 +407,7 @@ begin
   Result := FInfo;
 end;
 
-procedure TRESTServer.Initialize(const pServerInfo: IRESTServerInfo);
+procedure TRESTServer.Initialize(pServerInfo: IRESTServerInfo);
 begin
   if (pServerInfo = nil) then
     raise ERESTSeverException.Create('ServerInfo was not informed!');
@@ -448,7 +457,7 @@ begin
   FServers := TDictionary<string, IRESTServer>.Create;
 end;
 
-procedure TRESTServerContainer.CreateServer(const pServerInfo: IRESTServerInfo);
+procedure TRESTServerContainer.CreateServer(pServerInfo: IRESTServerInfo);
 var
   vServer: IRESTServer;
   vPair: TPair<string, IRESTServer>;
@@ -536,6 +545,18 @@ begin
     end;
   end;
   Result := ServerContainer;
+end;
+
+{ RESTServer }
+
+class function RESTServer.Container: IRESTServerContainer;
+begin
+  Result := TRESTSingletonServerContainer.GetInstance();
+end;
+
+constructor RESTServer.Create;
+begin
+  raise ERESTSeverException.Create(CanNotBeInstantiatedException);
 end;
 
 end.

@@ -24,7 +24,7 @@ type
   strict private
     FRESTResponse: IRESTResponse;
   private
-    procedure SetRESTResponse(const pResponse: IRESTResponse);
+    procedure SetRESTResponse(pResponse: IRESTResponse);
     function GetRESTResponse(): IRESTResponse;
   public
     constructor Create();
@@ -67,14 +67,14 @@ type
     function GET(): TRESTfulResponse;
 
     function POST(const pBody: string): TRESTfulResponse; overload;
-    function POST(const pBody: TJSONValue; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
-    function POST<TBodyType: class>(const pBody: TBodyType; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
-    function POST<TBodyType: class>(const pBody: TObjectList<TBodyType>; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
+    function POST(pBody: TJSONValue; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
+    function POST<TBodyType: class>(pBody: TBodyType; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
+    function POST<TBodyType: class>(pBody: TObjectList<TBodyType>; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
 
     function PUT(const pBody: string): TRESTfulResponse; overload;
-    function PUT(const pBody: TJSONValue; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
-    function PUT<TBodyType: class>(const pBody: TBodyType; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
-    function PUT<TBodyType: class>(const pBody: TObjectList<TBodyType>; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
+    function PUT(pBody: TJSONValue; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
+    function PUT<TBodyType: class>(pBody: TBodyType; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
+    function PUT<TBodyType: class>(pBody: TObjectList<TBodyType>; const pBodyFree: Boolean = True): TRESTfulResponse; overload;
 
     function DELETE(): TRESTfulResponse; overload;
 
@@ -201,7 +201,7 @@ begin
   Result := Self;
 end;
 
-function TRESTfulClient.POST(const pBody: TJSONValue; const pBodyFree: Boolean): TRESTfulResponse;
+function TRESTfulClient.POST(pBody: TJSONValue; const pBodyFree: Boolean): TRESTfulResponse;
 begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPOST(FResource, FParams, pBody, pBodyFree)
@@ -209,7 +209,7 @@ begin
   Result := FRESTResponse;
 end;
 
-function TRESTfulClient.POST<TBodyType>(const pBody: TObjectList<TBodyType>; const pBodyFree: Boolean): TRESTfulResponse;
+function TRESTfulClient.POST<TBodyType>(pBody: TObjectList<TBodyType>; const pBodyFree: Boolean): TRESTfulResponse;
 begin
   pBody.OwnsObjects := pBodyFree;
 
@@ -228,7 +228,7 @@ begin
   Result := FRESTResponse;
 end;
 
-function TRESTfulClient.POST<TBodyType>(const pBody: TBodyType; const pBodyFree: Boolean): TRESTfulResponse;
+function TRESTfulClient.POST<TBodyType>(pBody: TBodyType; const pBodyFree: Boolean): TRESTfulResponse;
 begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPOST(FResource, FParams, Mapper.ObjectToJSONObject(pBody) as TJSONValue, True)
@@ -240,7 +240,7 @@ begin
   Result := FRESTResponse;
 end;
 
-function TRESTfulClient.PUT(const pBody: TJSONValue; const pBodyFree: Boolean): TRESTfulResponse;
+function TRESTfulClient.PUT(pBody: TJSONValue; const pBodyFree: Boolean): TRESTfulResponse;
 begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPUT(FResource, FParams, pBody, pBodyFree)
@@ -248,7 +248,7 @@ begin
   Result := FRESTResponse;
 end;
 
-function TRESTfulClient.PUT<TBodyType>(const pBody: TObjectList<TBodyType>; const pBodyFree: Boolean): TRESTfulResponse;
+function TRESTfulClient.PUT<TBodyType>(pBody: TObjectList<TBodyType>; const pBodyFree: Boolean): TRESTfulResponse;
 begin
   pBody.OwnsObjects := pBodyFree;
 
@@ -267,7 +267,7 @@ begin
   Result := FRESTResponse;
 end;
 
-function TRESTfulClient.PUT<TBodyType>(const pBody: TBodyType; const pBodyFree: Boolean): TRESTfulResponse;
+function TRESTfulClient.PUT<TBodyType>(pBody: TBodyType; const pBodyFree: Boolean): TRESTfulResponse;
 begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPUT(FResource, FParams, Mapper.ObjectToJSONObject(pBody) as TJSONValue, True)
@@ -340,7 +340,7 @@ begin
   Result := FRESTResponse;
 end;
 
-procedure TRESTfulResponse.SetRESTResponse(const pResponse: IRESTResponse);
+procedure TRESTfulResponse.SetRESTResponse(pResponse: IRESTResponse);
 begin
   FRESTResponse := pResponse;
 end;

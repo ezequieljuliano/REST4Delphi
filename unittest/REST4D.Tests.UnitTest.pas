@@ -76,8 +76,8 @@ begin
   vServerInfo.WebModuleClass := AppWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  RESTServerContainer.CreateServer(vServerInfo);
-  RESTServerContainer.StartServers;
+  RESTServer.Container.CreateServer(vServerInfo);
+  RESTServer.Container.StartServers;
 
   FRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   FRESTAdapter := TRESTAdapter<IAppResource>.Create;
@@ -88,7 +88,7 @@ end;
 procedure TTestREST4D.TearDown;
 begin
   inherited;
-  RESTServerContainer.StopServers;
+  RESTServer.Container.StopServers;
   FreeAndNil(FRESTfulClient);
 end;
 
@@ -103,9 +103,9 @@ begin
   vServerInfo.WebModuleClass := TempWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  RESTServerContainer.CreateServer(vServerInfo);
+  RESTServer.Container.CreateServer(vServerInfo);
 
-  CheckTrue(RESTServerContainer.FindServerByName('ServerTemp') <> nil);
+  CheckTrue(RESTServer.Container.FindServerByName('ServerTemp') <> nil);
 end;
 
 procedure TTestREST4D.TestDestroyServer;
@@ -119,10 +119,10 @@ begin
   vServerInfo.WebModuleClass := TempWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  RESTServerContainer.CreateServer(vServerInfo);
-  RESTServerContainer.DestroyServer('ServerTemp');
+  RESTServer.Container.CreateServer(vServerInfo);
+  RESTServer.Container.DestroyServer('ServerTemp');
 
-  CheckTrue(RESTServerContainer.FindServerByName('ServerTemp') = nil);
+  CheckTrue(RESTServer.Container.FindServerByName('ServerTemp') = nil);
 end;
 
 procedure TTestREST4D.TestFindServerByName;
@@ -136,9 +136,9 @@ begin
   vServerInfo.WebModuleClass := TempWebModuleClass;
   vServerInfo.Authentication.AddUser('ezequiel', '123');
 
-  RESTServerContainer.CreateServer(vServerInfo);
+  RESTServer.Container.CreateServer(vServerInfo);
 
-  CheckTrue(RESTServerContainer.FindServerByName('ServerTemp') <> nil);
+  CheckTrue(RESTServer.Container.FindServerByName('ServerTemp') <> nil);
 end;
 
 procedure TTestREST4D.TestGetUser;
