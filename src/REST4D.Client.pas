@@ -109,11 +109,9 @@ begin
 end;
 
 function TRESTfulClient.Authorization(const pUser, pPassword: string): TRESTfulClient;
-var
-  vAuthorization: string;
 begin
-  vAuthorization := TRESTCodification.EncodeBase64(pUser + ':' + pPassword);
-  FRESTClient.RequestHeaders.Add('Authorization=Basic ' + vAuthorization);
+  FRESTClient.UserName := pUser;
+  FRESTClient.Password := pPassword;
   Result := Self;
 end;
 
