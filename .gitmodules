@@ -1,0 +1,3 @@
+[submodule "dependencies/delphimvcframework"]
+	path = dependencies/delphimvcframework
+	url = https://github.com/ezequieljuliano/delphimvcframework.git
