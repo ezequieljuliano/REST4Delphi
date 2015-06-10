@@ -250,8 +250,6 @@ end;
 
 function TRESTServerInfo.GetSecurity: IRESTSecurity;
 begin
-  if (FSecurity = nil) then
-    raise ERESTSeverException.Create('Security was not informed!');
   Result := FSecurity;
 end;
 
