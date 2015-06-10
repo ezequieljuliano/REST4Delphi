@@ -14,23 +14,23 @@ type
   TUserController = class(TRESTController)
   public
     [Path('/hello')]
-    [HTTPMethod([THTTPMethodType.httpGET])]
+    [HTTPMethod([THTTPMethod.httpGET])]
     procedure HelloWorld(ctx: TRESTWebContext);
 
     [Path('/user')]
-    [HTTPMethod([THTTPMethodType.httpGET])]
+    [HTTPMethod([THTTPMethod.httpGET])]
     procedure GetUser(ctx: TRESTWebContext);
 
     [Path('/user/save')]
-    [HTTPMethod([THTTPMethodType.httpPOST])]
+    [HTTPMethod([THTTPMethod.httpPOST])]
     procedure PostUser(ctx: TRESTWebContext);
 
     [Path('/users')]
-    [HTTPMethod([THTTPMethodType.httpGET])]
+    [HTTPMethod([THTTPMethod.httpGET])]
     procedure GetUsers(ctx: TRESTWebContext);
 
     [Path('/users/save')]
-    [HTTPMethod([THTTPMethodType.httpPOST])]
+    [HTTPMethod([THTTPMethod.httpPOST])]
     procedure PostUsers(ctx: TRESTWebContext);
   end;
 
@@ -71,7 +71,7 @@ begin
     vUsers.Add(vUser);
   end;
 
-  Render<TUser>(vUsers);
+  Self.Render<TUser>(vUsers);
 end;
 
 procedure TUserController.HelloWorld(ctx: TRESTWebContext);

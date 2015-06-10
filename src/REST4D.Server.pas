@@ -31,19 +31,20 @@ type
     procedure SetMaxConnections(const pValue: Integer);
 
     function GetWebModuleClass(): TComponentClass;
-    procedure SetWebModuleClass(const pValue: TComponentClass);
+    procedure SetWebModuleClass(pValue: TComponentClass);
 
     function GetBridge(): TRESTBridge;
     procedure SetBridge(const pValue: TRESTBridge);
 
-    function GetAuthentication(): IRESTAuthentication;
+    function GetSecurity(): IRESTSecurity;
+    procedure SetSecurity(pValue: IRESTSecurity);
 
     property ServerName: string read GetServerName write SetServerName;
     property Port: Integer read GetPort write SetPort;
     property MaxConnections: Integer read GetMaxConnections write SetMaxConnections;
     property WebModuleClass: TComponentClass read GetWebModuleClass write SetWebModuleClass;
     property Bridge: TRESTBridge read GetBridge write SetBridge;
-    property Authentication: IRESTAuthentication read GetAuthentication;
+    property Security: IRESTSecurity read GetSecurity write SetSecurity;
   end;
 
   TRESTServerInfoFactory = class sealed
@@ -53,9 +54,9 @@ type
 
   IRESTServer = interface
     ['{95E91DF0-6ABF-46B1-B995-FC748BC54568}']
-    procedure Initialize(pServerInfo: IRESTServerInfo);
-
     function GetInfo(): IRESTServerInfo;
+
+    procedure Initialize(pServerInfo: IRESTServerInfo);
 
     procedure Start();
     procedure Stop();
@@ -65,10 +66,10 @@ type
 
   IRESTServerContainer = interface
     ['{B20796A0-CB07-4D16-BEAB-4F0B10880318}']
+    function GetServers(): TDictionary<string, IRESTServer>;
+
     procedure CreateServer(pServerInfo: IRESTServerInfo);
     procedure DestroyServer(const pServerName: string);
-
-    function GetServers(): TDictionary<string, IRESTServer>;
 
     procedure StartServers();
     procedure StopServers();
@@ -80,7 +81,7 @@ type
 
   TRESTController = MVCFramework.TMVCController;
   TRESTWebContext = MVCFramework.TWebContext;
-  THTTPMethodType = MVCFramework.TMVCHTTPMethodType;
+  THTTPMethod = MVCFramework.TMVCHTTPMethodType;
   THTTPMethods = MVCFramework.TMVCHTTPMethods;
   HTTPMethodAttribute = MVCFramework.MVCHTTPMethodAttribute;
   StringValueAttribute = MVCFramework.MVCStringAttribute;
@@ -91,10 +92,6 @@ type
   TRESTEngine = class(TMVCEngine)
   strict private
     FServerName: string;
-    function GetServerAuthentication(): IRESTAuthentication;
-    function Authenticate(pRequest: TWebRequest): Boolean;
-  protected
-    function ExecuteAction(Sender: TObject; Request: TWebRequest; Response: TWebResponse): Boolean; override;
   public
     property ServerName: string read FServerName write FServerName;
   end;
@@ -137,10 +134,7 @@ type
     FMaxConnections: Integer;
     FWebModuleClass: TComponentClass;
     FBridge: TRESTBridge;
-    FAuthentication: IRESTAuthentication;
-  public
-    constructor Create();
-    destructor Destroy(); override;
+    FSecurity: IRESTSecurity;
 
     function GetServerName(): string;
     procedure SetServerName(const pValue: string);
@@ -152,19 +146,23 @@ type
     procedure SetMaxConnections(const pValue: Integer);
 
     function GetWebModuleClass(): TComponentClass;
-    procedure SetWebModuleClass(const pValue: TComponentClass);
+    procedure SetWebModuleClass(pValue: TComponentClass);
 
     function GetBridge(): TRESTBridge;
     procedure SetBridge(const pValue: TRESTBridge);
 
-    function GetAuthentication(): IRESTAuthentication;
+    function GetSecurity(): IRESTSecurity;
+    procedure SetSecurity(pValue: IRESTSecurity);
+  public
+    constructor Create();
+    destructor Destroy(); override;
 
     property ServerName: string read GetServerName write SetServerName;
     property Port: Integer read GetPort write SetPort;
     property MaxConnections: Integer read GetMaxConnections write SetMaxConnections;
     property WebModuleClass: TComponentClass read GetWebModuleClass write SetWebModuleClass;
     property Bridge: TRESTBridge read GetBridge write SetBridge;
-    property Authentication: IRESTAuthentication read GetAuthentication;
+    property Security: IRESTSecurity read GetSecurity write SetSecurity;
   end;
 
   TRESTServer = class(TInterfacedObject, IRESTServer)
@@ -206,91 +204,7 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
-  { TRESTEngine }
-
-function TRESTEngine.Authenticate(pRequest: TWebRequest): Boolean;
-  function ContainsAuthorization(): Boolean;
-  begin
-    try
-      Result := (pRequest.Authorization <> AnsiString(EmptyStr));
-    except
-      Result := False;
-    end;
-  end;
-
-  function ContainsApiKey(): Boolean;
-  begin
-    try
-      Result := (pRequest.GetFieldByName(AnsiString('ApiKey')) <> AnsiString(EmptyStr));
-    except
-      Result := False;
-    end;
-  end;
-
-  function DecodeAuthorization(): string;
-  begin
-    try
-      Result := string(pRequest.Authorization);
-      Result := TRESTCodification.DecodeBase64(Copy(Result, Pos(' ', Result) + 1, Length(Result)));
-    except
-      Result := EmptyStr;
-    end;
-  end;
-
-  function DecodeApiKey(): string;
-  begin
-    try
-      Result := string(pRequest.GetFieldByName(AnsiString('ApiKey')));
-    except
-      Result := EmptyStr;
-    end;
-  end;
-
-var
-  vUserName, vPassword, vDecode: string;
-begin
-  Result := True;
-  if (GetServerAuthentication.CountUsers > 0) then
-  begin
-    Result := False;
-    if ContainsAuthorization() then
-    begin
-      vDecode := DecodeAuthorization();
-      if (vDecode <> EmptyStr) then
-      begin
-        vUserName := Copy(vDecode, 1, Pos(':', vDecode) - 1);
-        vPassword := Copy(vDecode, Pos(':', vDecode) + 1, Length(vDecode));
-        Result := GetServerAuthentication.UserIsValid(vUserName, vPassword);
-      end;
-    end
-    else if ContainsApiKey() then
-    begin
-      vDecode := DecodeApiKey();
-      if (vDecode <> EmptyStr) then
-        Result := GetServerAuthentication.UserIsValid(vDecode);
-    end;
-  end;
-end;
-
-function TRESTEngine.ExecuteAction(Sender: TObject; Request: TWebRequest; Response: TWebResponse): Boolean;
-begin
-  Result := False;
-  if Authenticate(Request) then
-    inherited ExecuteAction(Sender, Request, Response)
-  else
-  begin
-    Response.StatusCode := 401;
-    Response.ReasonString := 'Unauthorized';
-    Response.Content := 'Unauthorized';
-  end;
-end;
-
-function TRESTEngine.GetServerAuthentication: IRESTAuthentication;
-begin
-  Result := RESTServer.Container.FindServerByName(FServerName).Info.Authentication;
-end;
-
-{ TRESTServerInfoFactory }
+  { TRESTServerInfoFactory }
 
 class function TRESTServerInfoFactory.Build: IRESTServerInfo;
 begin
@@ -306,20 +220,13 @@ begin
   FMaxConnections := 0;
   FWebModuleClass := nil;
   FBridge := TRESTBridge.rbIndy;
-  FAuthentication := TRESTAuthenticationFactory.Build();
+  FSecurity := nil;
 end;
 
 destructor TRESTServerInfo.Destroy;
 begin
 
   inherited;
-end;
-
-function TRESTServerInfo.GetAuthentication: IRESTAuthentication;
-begin
-  if (FAuthentication = nil) then
-    raise ERESTSeverException.Create('Authentication was not created!');
-  Result := FAuthentication;
 end;
 
 function TRESTServerInfo.GetBridge: TRESTBridge;
@@ -339,6 +246,13 @@ begin
   if (FPort = 0) then
     raise ERESTSeverException.Create('Port was not informed!');
   Result := FPort;
+end;
+
+function TRESTServerInfo.GetSecurity: IRESTSecurity;
+begin
+  if (FSecurity = nil) then
+    raise ERESTSeverException.Create('Security was not informed!');
+  Result := FSecurity;
 end;
 
 function TRESTServerInfo.GetServerName: string;
@@ -370,12 +284,17 @@ begin
   FPort := pValue;
 end;
 
+procedure TRESTServerInfo.SetSecurity(pValue: IRESTSecurity);
+begin
+  FSecurity := pValue;
+end;
+
 procedure TRESTServerInfo.SetServerName(const pValue: string);
 begin
   FServerName := pValue;
 end;
 
-procedure TRESTServerInfo.SetWebModuleClass(const pValue: TComponentClass);
+procedure TRESTServerInfo.SetWebModuleClass(pValue: TComponentClass);
 begin
   FWebModuleClass := pValue;
 end;

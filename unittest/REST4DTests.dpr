@@ -24,7 +24,8 @@ uses
   REST4D.Tests.AppWebModule in 'REST4D.Tests.AppWebModule.pas' {AppWebModule: TWebModule},
   REST4D.Tests.AppController in 'REST4D.Tests.AppController.pas',
   REST4D.Tests.TempWebModule in 'REST4D.Tests.TempWebModule.pas' {TempWebModule: TWebModule},
-  REST4D.Adapter in '..\src\REST4D.Adapter.pas';
+  REST4D.Adapter in '..\src\REST4D.Adapter.pas',
+  REST4D.Mapping in '..\src\REST4D.Mapping.pas';
 
 {$R *.RES}
 

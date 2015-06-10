@@ -10,7 +10,7 @@ uses
 
 type
 
-  THTTPMethodType = MVCFramework.TMVCHTTPMethodType;
+  THTTPMethod = MVCFramework.TMVCHTTPMethodType;
   THTTPMethods = MVCFramework.TMVCHTTPMethods;
   HTTPMethodAttribute = MVCFramework.MVCHTTPMethodAttribute;
   RESTResourceAttribute = MVCFramework.RESTAdapter.RESTResourceAttribute;
@@ -42,7 +42,7 @@ function TRESTAdapter<T>.Build(const pRESTfulClient: TRESTfulClient; const pOwns
 begin
   FRESTfulClient := pRESTfulClient;
   FOwnsRESTfulClient := pOwnsRESTfulClient;
-  Result := Build(FRESTfulClient.DefaultClient)
+  Result := Build(FRESTfulClient.Device)
 end;
 
 function TRESTAdapter<T>.Build(const pRESTfulClient: TRESTfulClient): T;

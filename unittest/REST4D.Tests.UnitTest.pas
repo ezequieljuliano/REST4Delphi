@@ -14,27 +14,27 @@ uses
   REST4D.Tests.AppController,
   REST4D.Tests.TempWebModule,
   System.Generics.Collections,
-  ObjectsMappers;
+  REST4D.Mapping;
 
 type
 
   IAppResource = interface(IInvokable)
     ['{D139CD79-CFE5-49E3-8CFB-27686621911B}']
 
-    [RESTResource(THTTPMethodType.httpGET, '/hello')]
+    [RESTResource(THTTPMethod.httpGET, '/hello')]
     function HelloWorld(): string;
 
-    [RESTResource(THTTPMethodType.httpGET, '/user')]
+    [RESTResource(THTTPMethod.httpGET, '/user')]
     function GetUser(): TUser;
 
-    [RESTResource(THTTPMethodType.httpPOST, '/user/save')]
+    [RESTResource(THTTPMethod.httpPOST, '/user/save')]
     procedure PostUser([Body] pBody: TUser);
 
-    [RESTResource(THTTPMethodType.httpGET, '/users')]
+    [RESTResource(THTTPMethod.httpGET, '/users')]
     [MapperListOf(TUser)]
     function GetUsers(): TObjectList<TUser>;
 
-    [RESTResource(THTTPMethodType.httpPOST, '/users/save')]
+    [RESTResource(THTTPMethod.httpPOST, '/users/save')]
     procedure PostUsers([Body] pBody: TObjectList<TUser>);
 
   end;
@@ -66,6 +66,7 @@ implementation
 procedure TTestREST4D.SetUp;
 var
   vServerInfo: IRESTServerInfo;
+  vOnAuthentication: TRESTAuthenticationDelegate;
 begin
   inherited;
   vServerInfo := TRESTServerInfoFactory.Build;
@@ -74,7 +75,14 @@ begin
   vServerInfo.MaxConnections := 1024;
   vServerInfo.Bridge := TRESTBridge.rbIOCP;
   vServerInfo.WebModuleClass := AppWebModuleClass;
-  vServerInfo.Authentication.AddUser('ezequiel', '123');
+
+  vOnAuthentication := procedure(const pUserName, pPassword: string;
+      pUserRoles: TList<string>; var pIsValid: Boolean)
+    begin
+      pIsValid := pUserName.Equals('ezequiel') and pPassword.Equals('123');
+    end;
+
+  vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
   RESTServer.Container.CreateServer(vServerInfo);
   RESTServer.Container.StartServers;
@@ -95,13 +103,21 @@ end;
 procedure TTestREST4D.TestCreateServer;
 var
   vServerInfo: IRESTServerInfo;
+  vOnAuthentication: TRESTAuthenticationDelegate;
 begin
   vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerTemp';
   vServerInfo.Port := 4000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := TempWebModuleClass;
-  vServerInfo.Authentication.AddUser('ezequiel', '123');
+
+  vOnAuthentication := procedure(const pUserName, pPassword: string;
+      pUserRoles: TList<string>; var pIsValid: Boolean)
+    begin
+      pIsValid := pUserName.Equals('ezequiel') and pPassword.Equals('123');
+    end;
+
+  vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
   RESTServer.Container.CreateServer(vServerInfo);
 
@@ -111,13 +127,21 @@ end;
 procedure TTestREST4D.TestDestroyServer;
 var
   vServerInfo: IRESTServerInfo;
+  vOnAuthentication: TRESTAuthenticationDelegate;
 begin
   vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerTemp';
   vServerInfo.Port := 4000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := TempWebModuleClass;
-  vServerInfo.Authentication.AddUser('ezequiel', '123');
+
+  vOnAuthentication := procedure(const pUserName, pPassword: string;
+      pUserRoles: TList<string>; var pIsValid: Boolean)
+    begin
+      pIsValid := pUserName.Equals('ezequiel') and pPassword.Equals('123');
+    end;
+
+  vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
   RESTServer.Container.CreateServer(vServerInfo);
   RESTServer.Container.DestroyServer('ServerTemp');
@@ -128,13 +152,21 @@ end;
 procedure TTestREST4D.TestFindServerByName;
 var
   vServerInfo: IRESTServerInfo;
+  vOnAuthentication: TRESTAuthenticationDelegate;
 begin
   vServerInfo := TRESTServerInfoFactory.Build;
   vServerInfo.ServerName := 'ServerTemp';
   vServerInfo.Port := 4000;
   vServerInfo.MaxConnections := 1024;
   vServerInfo.WebModuleClass := TempWebModuleClass;
-  vServerInfo.Authentication.AddUser('ezequiel', '123');
+
+  vOnAuthentication := procedure(const pUserName, pPassword: string;
+      pUserRoles: TList<string>; var pIsValid: Boolean)
+    begin
+      pIsValid := pUserName.Equals('ezequiel') and pPassword.Equals('123');
+    end;
+
+  vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
   RESTServer.Container.CreateServer(vServerInfo);
 
@@ -147,7 +179,7 @@ var
   vResp: TRESTfulResponse;
 begin
   FRESTfulClient.Resource('/user').Params([]);
-  FRESTfulClient.Authorization('ezequiel', '123');
+  FRESTfulClient.Authentication('ezequiel', '123');
 
   // String
   vResp := FRESTfulClient.GET;
@@ -178,7 +210,7 @@ var
   vUsers: TObjectList<TUser>;
 begin
   FRESTfulClient.Resource('/users').Params([]);
-  FRESTfulClient.Authorization('ezequiel', '123');
+  FRESTfulClient.Authentication('ezequiel', '123');
 
   // String
   CheckEqualsString('[{"Cod":0,"Name":"Ezequiel 0","Pass":"0"},{"Cod":1,"Name":"Ezequiel 1","Pass":"1"},' +
@@ -209,7 +241,7 @@ end;
 procedure TTestREST4D.TestHelloWorld;
 begin
   FRESTfulClient.Resource('/hello').Params([]);
-  FRESTfulClient.Authorization('ezequiel', '123');
+  FRESTfulClient.Authentication('ezequiel', '123');
 
   // String
   CheckEqualsString('"Hello World called with GET"', FRESTfulClient.GET.AsString);
@@ -224,7 +256,7 @@ var
   vResp: TRESTfulResponse;
 begin
   FRESTfulClient.Resource('/user/save').Params([]);
-  FRESTfulClient.Authorization('ezequiel', '123');
+  FRESTfulClient.Authentication('ezequiel', '123');
 
   vUser := TUser.Create;
   vUser.Cod := 1;
@@ -249,7 +281,7 @@ var
   vUser: TUser;
 begin
   FRESTfulClient.Resource('/users/save').Params([]);
-  FRESTfulClient.Authorization('ezequiel', '123');
+  FRESTfulClient.Authentication('ezequiel', '123');
   FRESTfulClient.ContentType('application/json; charset=utf-8');
 
   vUsers := TObjectList<TUser>.Create(True);

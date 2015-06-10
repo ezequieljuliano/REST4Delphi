@@ -48,7 +48,7 @@ begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
     vRESTfulClient.Resource('/user').Params([]);
-    vRESTfulClient.Authorization('ezequiel', '123');
+    vRESTfulClient.Authentication('ezequiel', '123');
 
     vResp := vRESTfulClient.GET;
 
@@ -66,7 +66,7 @@ begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
     vRESTfulClient.Resource('/users').Params([]);
-    vRESTfulClient.Authorization('ezequiel', '123');
+    vRESTfulClient.Authentication('ezequiel', '123');
 
     vResp := vRESTfulClient.GET;
 
@@ -84,7 +84,7 @@ begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
     vRESTfulClient.Resource('/hello').Params([]);
-    vRESTfulClient.Authorization('ezequiel', '123');
+    vRESTfulClient.Authentication('ezequiel', '123');
 
     vResp := vRESTfulClient.GET;
 
@@ -103,7 +103,7 @@ begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
     vRESTfulClient.Resource('/user/save').Params([]);
-    vRESTfulClient.Authorization('ezequiel', '123');
+    vRESTfulClient.Authentication('ezequiel', '123');
 
     vUser := TUser.Create;
     vUser.Cod := 1;
@@ -129,7 +129,7 @@ begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
     vRESTfulClient.Resource('/users/save').Params([]);
-    vRESTfulClient.Authorization('ezequiel', '123');
+    vRESTfulClient.Authentication('ezequiel', '123');
 
     vUsers := TObjectList<TUser>.Create(True);
 
@@ -159,7 +159,7 @@ begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   try
     vRESTfulClient.Resource('/user').Params([]);
-    vRESTfulClient.Authorization('123', '123');
+    vRESTfulClient.Authentication('123', '123');
 
     vResp := vRESTfulClient.GET;
 

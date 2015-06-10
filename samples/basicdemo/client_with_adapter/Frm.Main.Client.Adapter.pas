@@ -71,7 +71,7 @@ var
   vRESTAdapter: TRESTAdapter<IUserResource>;
 begin
   vRESTfulClient := TRESTfulClient.Create('localhost', 3000);
-  vRESTfulClient.Authorization('ezequiel', '123');
+  vRESTfulClient.Authentication('ezequiel', '123');
   vRESTAdapter := TRESTAdapter<IUserResource>.Create;
   vRESTAdapter.Build(vRESTfulClient, True);
   FUserResource := vRESTAdapter.ResourcesService;

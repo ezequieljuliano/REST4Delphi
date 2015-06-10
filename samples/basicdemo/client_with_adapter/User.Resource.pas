@@ -4,29 +4,29 @@ interface
 
 uses
   User,
-  ObjectsMappers,
   System.Generics.Collections,
   REST4D,
+  REST4D.Mapping,
   REST4D.Adapter;
 
 type
 
   IUserResource = interface(IInvokable)
     ['{BF864FFF-7EB6-4A07-812E-EAC80F7AE0C9}']
-    [RESTResource(THTTPMethodType.httpGET, '/hello')]
+    [RESTResource(THTTPMethod.httpGET, '/hello')]
     function HelloWorld(): string;
 
-    [RESTResource(THTTPMethodType.httpGET, '/user')]
+    [RESTResource(THTTPMethod.httpGET, '/user')]
     function GetUser(): TUser;
 
-    [RESTResource(THTTPMethodType.httpPOST, '/user/save')]
+    [RESTResource(THTTPMethod.httpPOST, '/user/save')]
     procedure PostUser([Body] pBody: TUser);
 
-    [RESTResource(THTTPMethodType.httpGET, '/users')]
+    [RESTResource(THTTPMethod.httpGET, '/users')]
     [MapperListOf(TUser)]
     function GetUsers(): TObjectList<TUser>;
 
-    [RESTResource(THTTPMethodType.httpPOST, '/users/save')]
+    [RESTResource(THTTPMethod.httpPOST, '/users/save')]
     procedure PostUsers([Body] pBody: TObjectList<TUser>);
   end;
 

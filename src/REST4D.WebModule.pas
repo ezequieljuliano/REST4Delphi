@@ -25,14 +25,27 @@ type
 
 implementation
 
+uses
+  MVCFramework.Middleware.Authentication;
+
 {$R *.dfm}
 
 procedure TRESTWebModule.AfterConstruction;
+var
+  vServer: IRESTServer;
 begin
   inherited AfterConstruction;
   FRESTEngine := TRESTEngine.Create(Self);
   FRESTEngine.ServerName := EmptyStr;
+
   Initialize();
+
+  if FRESTEngine.ServerName.IsEmpty then
+    raise ERESTSeverException.Create('ServerName was not informed on RESTEngine!');
+
+  vServer := RESTServer.Container.FindServerByName(FRESTEngine.ServerName);
+  if (vServer <> nil) and (vServer.Info.Security <> nil) then
+    FRESTEngine.AddMiddleware(TMVCBasicAuthenticationMiddleware.Create(vServer.Info.Security))
 end;
 
 procedure TRESTWebModule.BeforeDestruction;

@@ -5,15 +5,21 @@ interface
 uses
   REST4D,
   MVCFramework.RESTClient,
-  ObjectsMappers,
+  REST4D.Mapping,
   System.Generics.Collections,
   System.SysUtils,
   System.StrUtils,
+
   {$IF CompilerVersion < 27}
+
   Data.DBXJSON,
+
   {$ELSE}
+
   System.JSON,
-  {$IFEND}
+
+  {$ENDIF}
+
   IdURI;
 
 type
@@ -51,8 +57,7 @@ type
 
     function ReadTimeOut(const pReadTimeOut: Cardinal): TRESTfulClient;
     function ConnectionTimeOut(const pConnectionTimeOut: Cardinal): TRESTfulClient;
-    function Authorization(const pUser, pPassword: string): TRESTfulClient;
-    function ApiKey(const pApiKey: string): TRESTfulClient;
+    function Authentication(const pUser, pPassword: string): TRESTfulClient;
     function ClearHeaders(): TRESTfulClient;
     function Header(const pField, pValue: string): TRESTfulClient;
     function Accept(const pAcceptType: string): TRESTfulClient;
@@ -78,7 +83,7 @@ type
 
     function DELETE(): TRESTfulResponse; overload;
 
-    property DefaultClient: TRESTClient read FRESTClient;
+    property Device: TRESTClient read FRESTClient;
   end;
 
 implementation
@@ -102,13 +107,7 @@ begin
   Result := Self;
 end;
 
-function TRESTfulClient.ApiKey(const pApiKey: string): TRESTfulClient;
-begin
-  FRESTClient.RequestHeaders.Add('ApiKey=' + pApiKey);
-  Result := Self;
-end;
-
-function TRESTfulClient.Authorization(const pUser, pPassword: string): TRESTfulClient;
+function TRESTfulClient.Authentication(const pUser, pPassword: string): TRESTfulClient;
 begin
   FRESTClient.UserName := pUser;
   FRESTClient.Password := pPassword;

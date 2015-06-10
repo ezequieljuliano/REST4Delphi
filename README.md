@@ -1,6 +1,6 @@
 # REST For Delphi #
 
-The REST4Delphi is an API to facilitate the use of the project Delphi MVC Framework (https://code.google.com/p/delphimvcframework/).
+The REST4Delphi is an API to facilitate the use of the project [Delphi MVC Framework](https://github.com/danieleteti/delphimvcframework).
 
 With this API you can create servers that provide REST services and consume REST services written in any programming language.
 
@@ -10,7 +10,7 @@ The REST4Delphi API works with Delphi XE3 or higher and the client works on all 
 
 The REST4Delphi is coupled to DMVCFramework. Therefore this dependence is included in the project within the "dependencies" folder. You must put in the Path of his application or IDE the font directories of this dependence.
 
-- Delphi MVC Framework (https://code.google.com/p/delphimvcframework/);
+- [DMVCFramework (Delphi MVC Framework)](https://github.com/danieleteti/delphimvcframework);
 
 ## Samples ##
 
@@ -44,23 +44,23 @@ First, you must create your Controller that will provide the REST resources:
       TUserController = class(TRESTController)
       public
          [Path('/hello')]
-         [HTTPMethod([THTTPMethodType.httpGET])]
+         [HTTPMethod([THTTPMethod.httpGET])]
          procedure HelloWorld(ctx: TRESTWebContext);
     
          [Path('/user')]
-         [HTTPMethod([THTTPMethodType.httpGET])]
+         [HTTPMethod([THTTPMethod.httpGET])]
          procedure GetUser(ctx: TRESTWebContext);
     
          [Path('/user/save')]
-         [HTTPMethod([THTTPMethodType.httpPOST])]
+         [HTTPMethod([THTTPMethod.httpPOST])]
          procedure PostUser(ctx: TRESTWebContext);
     
          [Path('/users')]
-         [HTTPMethod([THTTPMethodType.httpGET])]
+         [HTTPMethod([THTTPMethod.httpGET])]
          procedure GetUsers(ctx: TRESTWebContext);
     
          [Path('/users/save')]
-         [HTTPMethod([THTTPMethodType.httpPOST])]
+         [HTTPMethod([THTTPMethod.httpPOST])]
          procedure PostUsers(ctx: TRESTWebContext);
       end;
 
@@ -97,7 +97,7 @@ Now, you must inherit the REST4D.WebModule and create your own WebModule, implem
       RESTEngine.ServerName := 'ServerBasicDemo';
     end;
 
-Now create your server:
+Now create your server using the container:
 
     uses
       REST4D, REST4D.Server,
@@ -106,16 +106,24 @@ Now create your server:
     procedure CreateServer;
     var
       vServerInfo: IRESTServerInfo;
+      vOnAuthentication: TRESTAuthenticationDelegate;
     begin
       vServerInfo := TRESTServerInfoFactory.Build;
       vServerInfo.ServerName := 'ServerBasicDemo';
       vServerInfo.Port := 3000;
       vServerInfo.MaxConnections := 1024;
       vServerInfo.WebModuleClass := BasicDemoWebModuleClass;
-      vServerInfo.Authentication.AddUser('ezequiel', '123');
+      
+      vOnAuthentication := procedure(const pUserName, pPassword: string;
+          pUserRoles: TList<string>; var pIsValid: Boolean)
+        begin
+           pIsValid := pUserName.Equals('ezequiel') and pPassword.Equals('123');
+        end;
+
+      vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
     
-      RESTServerContainer.CreateServer(vServerInfo);
-      RESTServerContainer.StartServers;
+      RESTServer.Container.CreateServer(vServerInfo);
+      RESTServer.Container.StartServers;
     end;
 
 ## Using the TRESTfulClient ##
@@ -148,8 +156,8 @@ First, create and map the resource to be consumed:
     
     uses
       User,
-      ObjectsMappers,
       System.Generics.Collections,
+      REST4D.Mapping,      
       REST4D,
       REST4D.Adapter;
     
@@ -157,20 +165,20 @@ First, create and map the resource to be consumed:
     
       IUserResource = interface(IInvokable)
         ['{BF864FFF-7EB6-4A07-812E-EAC80F7AE0C9}']
-        [RESTResource(THTTPMethodType.httpGET, '/hello')]
+        [RESTResource(THTTPMethod.httpGET, '/hello')]
         function HelloWorld(): string;
     
-        [RESTResource(THTTPMethodType.httpGET, '/user')]
+        [RESTResource(THTTPMethod.httpGET, '/user')]
         function GetUser(): TUser;
     
-        [RESTResource(THTTPMethodType.httpPOST, '/user/save')]
+        [RESTResource(THTTPMethod.httpPOST, '/user/save')]
         procedure PostUser([Body] pBody: TUser);
     
-        [RESTResource(THTTPMethodType.httpGET, '/users')]
+        [RESTResource(THTTPMethod.httpGET, '/users')]
         [MapperListOf(TUser)]
         function GetUsers(): TObjectList<TUser>;
     
-        [RESTResource(THTTPMethodType.httpPOST, '/users/save')]
+        [RESTResource(THTTPMethod.httpPOST, '/users/save')]
         procedure PostUsers([Body] pBody: TObjectList<TUser>);
       end;
 
