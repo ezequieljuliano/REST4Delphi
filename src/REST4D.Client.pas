@@ -38,6 +38,7 @@ type
     function AsString(): string;
     function AsJSONValue(): TJSONValue;
     function AsJSONObject(): TJSONObject;
+    function AsJSONArray(): TJSONArray;
     function AsObject<TResponseType: class, constructor>(): TResponseType;
     function AsObjectList<TResponseType: class, constructor>(): TObjectList<TResponseType>;
 
@@ -66,6 +67,7 @@ type
     function ContentCharSet(const pCharsetType: string): TRESTfulClient;
     function Resource(const pResource: string): TRESTfulClient;
     function Params(const pParams: array of string): TRESTfulClient;
+    function ClearParams(): TRESTfulClient;
     function SSL(const pEnabled: Boolean = True): TRESTfulClient;
     function Compression(const pEnabled: Boolean = True): TRESTfulClient;
 
@@ -120,6 +122,13 @@ begin
   Result := Self;
 end;
 
+function TRESTfulClient.ClearParams: TRESTfulClient;
+begin
+  FRESTClient.ClearAllParams;
+  SetLength(FParams, 0);
+  Result := Self;
+end;
+
 function TRESTfulClient.Compression(const pEnabled: Boolean): TRESTfulClient;
 begin
   FRESTClient.Compression(pEnabled);
@@ -162,6 +171,7 @@ begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doDELETE(FResource, FParams)
     );
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -179,6 +189,7 @@ begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doGET(FResource, FParams)
     );
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -203,6 +214,7 @@ begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPOST(FResource, FParams, pBody, pBodyFree)
     );
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -214,6 +226,7 @@ begin
     FRESTClient.doPOST(FResource, FParams, Mapper.ObjectListToJSONArray<TBodyType>(pBody, pBodyFree) as TJSONValue, True)
     );
 
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -222,6 +235,7 @@ begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPOST(FResource, FParams, pBody)
     );
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -234,6 +248,7 @@ begin
   if pBodyFree then
     TObject(pBody).Free;
 
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -242,6 +257,7 @@ begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPUT(FResource, FParams, pBody, pBodyFree)
     );
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -253,6 +269,7 @@ begin
     FRESTClient.doPUT(FResource, FParams, Mapper.ObjectListToJSONArray<TBodyType>(pBody, pBodyFree) as TJSONValue, True)
     );
 
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -261,6 +278,7 @@ begin
   FRESTResponse.SetRESTResponse(
     FRESTClient.doPUT(FResource, FParams, pBody)
     );
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -273,6 +291,7 @@ begin
   if pBodyFree then
     TObject(pBody).Free;
 
+  ClearParams;
   Result := FRESTResponse;
 end;
 
@@ -295,6 +314,11 @@ begin
 end;
 
 { TRESTfulResponse }
+
+function TRESTfulResponse.AsJSONArray: TJSONArray;
+begin
+  Result := (GetRESTResponse().BodyAsJsonValue as TJSONArray);
+end;
 
 function TRESTfulResponse.AsJSONObject: TJSONObject;
 begin
