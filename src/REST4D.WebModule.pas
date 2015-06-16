@@ -18,9 +18,8 @@ type
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
 
-    procedure Initialize(); virtual; abstract;
-
-    property RESTEngine: TRESTEngine read FRESTEngine;
+    procedure Initialize(const pRESTEngine: TRESTEngine); virtual; abstract;
+    procedure SecurityLayer(out pRESTSecurity: IRESTSecurity); virtual; abstract;
   end;
 
 implementation
@@ -32,20 +31,16 @@ uses
 
 procedure TRESTWebModule.AfterConstruction;
 var
-  vServer: IRESTServer;
+  vSecurity: IRESTSecurity;
 begin
   inherited AfterConstruction;
   FRESTEngine := TRESTEngine.Create(Self);
-  FRESTEngine.ServerName := EmptyStr;
 
-  Initialize();
+  Initialize(FRESTEngine);
+  SecurityLayer(vSecurity);
 
-  if FRESTEngine.ServerName.IsEmpty then
-    raise ERESTSeverException.Create('ServerName was not informed on RESTEngine!');
-
-  vServer := RESTServer.Container.FindServerByName(FRESTEngine.ServerName);
-  if (vServer <> nil) and (vServer.Info.Security <> nil) then
-    FRESTEngine.AddMiddleware(TMVCBasicAuthenticationMiddleware.Create(vServer.Info.Security))
+  if (vSecurity <> nil) then
+    FRESTEngine.AddMiddleware(TMVCBasicAuthenticationMiddleware.Create(vSecurity))
 end;
 
 procedure TRESTWebModule.BeforeDestruction;

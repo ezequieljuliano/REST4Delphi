@@ -73,7 +73,6 @@ begin
   vServerInfo.ServerName := 'Server1';
   vServerInfo.Port := 3000;
   vServerInfo.MaxConnections := 1024;
-  vServerInfo.Bridge := TRESTBridge.rbIOCP;
   vServerInfo.WebModuleClass := AppWebModuleClass;
 
   vOnAuthentication := procedure(const pUserName, pPassword: string;
@@ -84,8 +83,8 @@ begin
 
   vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
-  RESTServer.Container.CreateServer(vServerInfo);
-  RESTServer.Container.StartServers;
+  RESTServerDefault.Container.CreateServer(vServerInfo);
+  RESTServerDefault.Container.StartServers;
 
   FRESTfulClient := TRESTfulClient.Create('localhost', 3000);
   FRESTAdapter := TRESTAdapter<IAppResource>.Create;
@@ -96,7 +95,7 @@ end;
 procedure TTestREST4D.TearDown;
 begin
   inherited;
-  RESTServer.Container.StopServers;
+  RESTServerDefault.Container.StopServers;
   FreeAndNil(FRESTfulClient);
 end;
 
@@ -119,9 +118,9 @@ begin
 
   vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
-  RESTServer.Container.CreateServer(vServerInfo);
+  RESTServerDefault.Container.CreateServer(vServerInfo);
 
-  CheckTrue(RESTServer.Container.FindServerByName('ServerTemp') <> nil);
+  CheckTrue(RESTServerDefault.Container.FindServerByName('ServerTemp') <> nil);
 end;
 
 procedure TTestREST4D.TestDestroyServer;
@@ -143,10 +142,10 @@ begin
 
   vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
-  RESTServer.Container.CreateServer(vServerInfo);
-  RESTServer.Container.DestroyServer('ServerTemp');
+  RESTServerDefault.Container.CreateServer(vServerInfo);
+  RESTServerDefault.Container.DestroyServer('ServerTemp');
 
-  CheckTrue(RESTServer.Container.FindServerByName('ServerTemp') = nil);
+  CheckTrue(RESTServerDefault.Container.FindServerByName('ServerTemp') = nil);
 end;
 
 procedure TTestREST4D.TestFindServerByName;
@@ -168,9 +167,9 @@ begin
 
   vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
-  RESTServer.Container.CreateServer(vServerInfo);
+  RESTServerDefault.Container.CreateServer(vServerInfo);
 
-  CheckTrue(RESTServer.Container.FindServerByName('ServerTemp') <> nil);
+  CheckTrue(RESTServerDefault.Container.FindServerByName('ServerTemp') <> nil);
 end;
 
 procedure TTestREST4D.TestGetUser;

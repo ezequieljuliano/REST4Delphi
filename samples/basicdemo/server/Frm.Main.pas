@@ -47,13 +47,13 @@ begin
 
   vServerInfo.Security := TRESTDefaultSecurity.Create(vOnAuthentication, nil);
 
-  RESTServer.Container.CreateServer(vServerInfo);
-  RESTServer.Container.StartServers;
+  RESTServerDefault.Container.CreateServer(vServerInfo);
+  RESTServerDefault.Container.StartServers;
 end;
 
 procedure TFrmMain.FormDestroy(Sender: TObject);
 begin
-  RESTServer.Container.StopServers;
+  RESTServerDefault.Container.StopServers;
 end;
 
 end.

@@ -3,21 +3,27 @@ unit REST4D.Server;
 interface
 
 uses
-  REST4D,
   System.SysUtils,
   System.Classes,
-  MVCFramework,
   System.Generics.Collections,
-  Web.HTTPApp,
-  IdHTTPWebBrokerBridge,
-  Iocp.DSHTTPWebBroker,
-  System.SyncObjs;
+  System.SyncObjs,
+  REST4D
+
+  {$IFDEF IOCP},
+
+  Iocp.DSHTTPWebBroker
+
+  {$ELSE},
+
+  IdHTTPWebBrokerBridge
+
+  {$ENDIF},
+
+  MVCFramework;
 
 type
 
   ERESTSeverException = class(ERESTException);
-
-  TRESTBridge = (rbIndy, rbIOCP);
 
   IRESTServerInfo = interface
     ['{3A328987-2485-4660-BB9B-B8AFFF47E4BA}']
@@ -33,9 +39,6 @@ type
     function GetWebModuleClass(): TComponentClass;
     procedure SetWebModuleClass(pValue: TComponentClass);
 
-    function GetBridge(): TRESTBridge;
-    procedure SetBridge(const pValue: TRESTBridge);
-
     function GetSecurity(): IRESTSecurity;
     procedure SetSecurity(pValue: IRESTSecurity);
 
@@ -43,11 +46,18 @@ type
     property Port: Integer read GetPort write SetPort;
     property MaxConnections: Integer read GetMaxConnections write SetMaxConnections;
     property WebModuleClass: TComponentClass read GetWebModuleClass write SetWebModuleClass;
-    property Bridge: TRESTBridge read GetBridge write SetBridge;
     property Security: IRESTSecurity read GetSecurity write SetSecurity;
   end;
 
   TRESTServerInfoFactory = class sealed
+  strict private
+
+    {$HINTS OFF}
+
+    constructor Create;
+
+    {$HINTS ON}
+
   public
     class function Build(): IRESTServerInfo; static;
   end;
@@ -56,12 +66,23 @@ type
     ['{95E91DF0-6ABF-46B1-B995-FC748BC54568}']
     function GetInfo(): IRESTServerInfo;
 
-    procedure Initialize(pServerInfo: IRESTServerInfo);
-
     procedure Start();
     procedure Stop();
 
     property Info: IRESTServerInfo read GetInfo;
+  end;
+
+  TRESTServerFactory = class sealed
+  strict private
+
+    {$HINTS OFF}
+
+    constructor Create;
+
+    {$HINTS ON}
+
+  public
+    class function Build(pServerInfo: IRESTServerInfo): IRESTServer; static;
   end;
 
   IRESTServerContainer = interface
@@ -79,27 +100,33 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
+  TRESTServerContainerFactory = class sealed
+  strict private
+
+    {$HINTS OFF}
+
+    constructor Create;
+
+    {$HINTS ON}
+
+  public
+    class function Build(): IRESTServerContainer; static;
+  end;
+
+  TRESTEngine = MVCFramework.TMVCEngine;
   TRESTController = MVCFramework.TMVCController;
   TRESTWebContext = MVCFramework.TWebContext;
+
   THTTPMethod = MVCFramework.TMVCHTTPMethodType;
   THTTPMethods = MVCFramework.TMVCHTTPMethods;
+
   HTTPMethodAttribute = MVCFramework.MVCHTTPMethodAttribute;
   StringValueAttribute = MVCFramework.MVCStringAttribute;
   ConsumesAttribute = MVCFramework.MVCConsumesAttribute;
   ProducesAttribute = MVCFramework.MVCProducesAttribute;
   PathAttribute = MVCFramework.MVCPathAttribute;
 
-  TRESTEngine = class(TMVCEngine)
-  strict private
-    FServerName: string;
-  public
-    property ServerName: string read FServerName write FServerName;
-  end;
-
-  RESTServer = class sealed
-  strict private
-  const
-    CanNotBeInstantiatedException = 'This class can not be instantiated!';
+  RESTServerDefault = class sealed
   strict private
 
     {$HINTS OFF}
@@ -114,18 +141,10 @@ type
 
 implementation
 
+const
+  _CanNotBeInstantiatedException = 'This class can not be instantiated!';
+
 type
-
-  TRESTSingletonServerContainer = class sealed
-  strict private
-    class var CriticalSection: TCriticalSection;
-    class var ServerContainer: IRESTServerContainer;
-
-    class constructor Create;
-    class destructor Destroy;
-  public
-    class function GetInstance(): IRESTServerContainer; static;
-  end;
 
   TRESTServerInfo = class(TInterfacedObject, IRESTServerInfo)
   strict private
@@ -133,7 +152,6 @@ type
     FPort: Integer;
     FMaxConnections: Integer;
     FWebModuleClass: TComponentClass;
-    FBridge: TRESTBridge;
     FSecurity: IRESTSecurity;
 
     function GetServerName(): string;
@@ -148,9 +166,6 @@ type
     function GetWebModuleClass(): TComponentClass;
     procedure SetWebModuleClass(pValue: TComponentClass);
 
-    function GetBridge(): TRESTBridge;
-    procedure SetBridge(const pValue: TRESTBridge);
-
     function GetSecurity(): IRESTSecurity;
     procedure SetSecurity(pValue: IRESTSecurity);
   public
@@ -161,22 +176,29 @@ type
     property Port: Integer read GetPort write SetPort;
     property MaxConnections: Integer read GetMaxConnections write SetMaxConnections;
     property WebModuleClass: TComponentClass read GetWebModuleClass write SetWebModuleClass;
-    property Bridge: TRESTBridge read GetBridge write SetBridge;
     property Security: IRESTSecurity read GetSecurity write SetSecurity;
   end;
 
   TRESTServer = class(TInterfacedObject, IRESTServer)
   strict private
-    FIndyBridge: TIdHTTPWebBrokerBridge;
-    FIOCPBridge: TIocpWebBrokerBridge;
+
+    {$IFDEF IOCP}
+
+    FBridge: TIocpWebBrokerBridge;
+
+    {$ELSE}
+
+    FBridge: TIdHTTPWebBrokerBridge;
+
+    {$ENDIF}
+
     FInfo: IRESTServerInfo;
-  public
-    constructor Create();
-    destructor Destroy(); override;
-
-    procedure Initialize(pServerInfo: IRESTServerInfo);
-
+  strict private
     function GetInfo(): IRESTServerInfo;
+    procedure Configuration(pServerInfo: IRESTServerInfo);
+  public
+    constructor Create(pServerInfo: IRESTServerInfo);
+    destructor Destroy(); override;
 
     procedure Start();
     procedure Stop();
@@ -204,14 +226,18 @@ type
     property Servers: TDictionary<string, IRESTServer> read GetServers;
   end;
 
-  { TRESTServerInfoFactory }
+  TRESTSingletonServerContainer = class sealed
+  strict private
+    class var CriticalSection: TCriticalSection;
+    class var ServerContainer: IRESTServerContainer;
 
-class function TRESTServerInfoFactory.Build: IRESTServerInfo;
-begin
-  Result := TRESTServerInfo.Create;
-end;
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function GetInstance(): IRESTServerContainer; static;
+  end;
 
-{ TRESTServerInfo }
+  { TRESTServerInfo }
 
 constructor TRESTServerInfo.Create;
 begin
@@ -219,7 +245,6 @@ begin
   FPort := 0;
   FMaxConnections := 0;
   FWebModuleClass := nil;
-  FBridge := TRESTBridge.rbIndy;
   FSecurity := nil;
 end;
 
@@ -227,11 +252,6 @@ destructor TRESTServerInfo.Destroy;
 begin
 
   inherited;
-end;
-
-function TRESTServerInfo.GetBridge: TRESTBridge;
-begin
-  Result := FBridge;
 end;
 
 function TRESTServerInfo.GetMaxConnections: Integer;
@@ -267,11 +287,6 @@ begin
   Result := FWebModuleClass;
 end;
 
-procedure TRESTServerInfo.SetBridge(const pValue: TRESTBridge);
-begin
-  FBridge := pValue;
-end;
-
 procedure TRESTServerInfo.SetMaxConnections(const pValue: Integer);
 begin
   FMaxConnections := pValue;
@@ -297,22 +312,29 @@ begin
   FWebModuleClass := pValue;
 end;
 
+{ TRESTServerInfoFactory }
+
+class function TRESTServerInfoFactory.Build: IRESTServerInfo;
+begin
+  Result := TRESTServerInfo.Create;
+end;
+
+constructor TRESTServerInfoFactory.Create;
+begin
+  raise ERESTSeverException.Create(_CanNotBeInstantiatedException);
+end;
+
 { TRESTServer }
 
-constructor TRESTServer.Create;
+constructor TRESTServer.Create(pServerInfo: IRESTServerInfo);
 begin
-  FIndyBridge := nil;
-  FIOCPBridge := nil;
-  FInfo := nil;
+  Configuration(pServerInfo);
 end;
 
 destructor TRESTServer.Destroy;
 begin
-  if (FIndyBridge <> nil) then
-    FreeAndNil(FIndyBridge);
-
-  if (FIOCPBridge <> nil) then
-    FreeAndNil(FIOCPBridge);
+  if (FBridge <> nil) then
+    FreeAndNil(FBridge);
   inherited;
 end;
 
@@ -324,47 +346,53 @@ begin
   Result := FInfo;
 end;
 
-procedure TRESTServer.Initialize(pServerInfo: IRESTServerInfo);
+procedure TRESTServer.Configuration(pServerInfo: IRESTServerInfo);
 begin
   if (pServerInfo = nil) then
     raise ERESTSeverException.Create('ServerInfo was not informed!');
 
   FInfo := pServerInfo;
 
-  case FInfo.Bridge of
-    rbIndy:
-      begin
-        FIndyBridge := TIdHTTPWebBrokerBridge.Create(nil);
-        Stop();
-        FIndyBridge.DefaultPort := FInfo.Port;
-        FIndyBridge.MaxConnections := FInfo.MaxConnections;
-        FIndyBridge.RegisterWebModuleClass(FInfo.WebModuleClass);
-      end;
-    rbIOCP:
-      begin
-        FIOCPBridge := TIocpWebBrokerBridge.Create(nil);
-        Stop();
-        FIOCPBridge.Port := FInfo.Port;
-        FIOCPBridge.MaxClients := FInfo.MaxConnections;
-        FIOCPBridge.RegisterWebModuleClass(FInfo.WebModuleClass);
-      end;
-  end;
+  {$IFDEF IOCP}
+
+  FBridge := TIocpWebBrokerBridge.Create(nil);
+  Stop();
+  FBridge.Port := FInfo.Port;
+  FBridge.MaxClients := FInfo.MaxConnections;
+  FBridge.RegisterWebModuleClass(FInfo.WebModuleClass);
+
+  {$ELSE}
+
+  FBridge := TIdHTTPWebBrokerBridge.Create(nil);
+  Stop();
+  FBridge.DefaultPort := FInfo.Port;
+  FBridge.MaxConnections := FInfo.MaxConnections;
+  FBridge.RegisterWebModuleClass(FInfo.WebModuleClass);
+
+  {$ENDIF}
+
 end;
 
 procedure TRESTServer.Start;
 begin
-  case FInfo.Bridge of
-    rbIndy: FIndyBridge.Active := True;
-    rbIOCP: FIOCPBridge.Active := True;
-  end;
+  FBridge.Active := True;
 end;
 
 procedure TRESTServer.Stop;
 begin
-  case FInfo.Bridge of
-    rbIndy: FIndyBridge.Active := False;
-    rbIOCP: FIOCPBridge.Active := False;
-  end;
+  FBridge.Active := False;
+end;
+
+{ TRESTServerFactory }
+
+class function TRESTServerFactory.Build(pServerInfo: IRESTServerInfo): IRESTServer;
+begin
+  Result := TRESTServer.Create(pServerInfo);
+end;
+
+constructor TRESTServerFactory.Create;
+begin
+  raise ERESTSeverException.Create(_CanNotBeInstantiatedException);
 end;
 
 { TRESTServerContainer }
@@ -385,8 +413,7 @@ begin
       if (vPair.Value.Info.WebModuleClass = pServerInfo.WebModuleClass) then
         raise ERESTSeverException.Create('Server List already contains ' + pServerInfo.WebModuleClass.ClassName + '!');
 
-    vServer := TRESTServer.Create;
-    vServer.Initialize(pServerInfo);
+    vServer := TRESTServerFactory.Build(pServerInfo);
     FServers.Add(pServerInfo.ServerName, vServer);
   end;
 end;
@@ -438,6 +465,18 @@ end;
 
 { TRESTServerContainerFactory }
 
+class function TRESTServerContainerFactory.Build: IRESTServerContainer;
+begin
+  Result := TRESTServerContainer.Create;
+end;
+
+constructor TRESTServerContainerFactory.Create;
+begin
+  raise ERESTSeverException.Create(_CanNotBeInstantiatedException);
+end;
+
+{ TRESTSingletonServerContainer }
+
 class constructor TRESTSingletonServerContainer.Create;
 begin
   CriticalSection := TCriticalSection.Create();
@@ -456,7 +495,7 @@ begin
   begin
     CriticalSection.Enter;
     try
-      ServerContainer := TRESTServerContainer.Create;
+      ServerContainer := TRESTServerContainerFactory.Build();
     finally
       CriticalSection.Leave;
     end;
@@ -464,16 +503,16 @@ begin
   Result := ServerContainer;
 end;
 
-{ RESTServer }
+{ RESTServerDefault }
 
-class function RESTServer.Container: IRESTServerContainer;
+class function RESTServerDefault.Container: IRESTServerContainer;
 begin
   Result := TRESTSingletonServerContainer.GetInstance();
 end;
 
-constructor RESTServer.Create;
+constructor RESTServerDefault.Create;
 begin
-  raise ERESTSeverException.Create(CanNotBeInstantiatedException);
+  raise ERESTSeverException.Create(_CanNotBeInstantiatedException);
 end;
 
 end.
