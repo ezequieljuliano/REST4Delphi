@@ -64,9 +64,11 @@ First, you must create your Controller that will provide the REST resources:
          procedure PostUsers(ctx: TRESTWebContext);
       end;
 
-Now, you must inherit the REST4D.WebModule and create your own WebModule, implement the abstract method Initialize and add a public variable of type TComponentClass on your WebModule: 
+Now, you must inherit the REST4D.WebModule and create your own WebModule, implement the abstract method Initialize(const pRESTEngine: TRESTEngine) and SecurityLayer(out pRESTSecurity: IRESTSecurity) and add a public variable of type TComponentClass on your WebModule: 
 
     uses
+      REST4D,
+      REST4D.Server,
       REST4D.WebModule;
     
     type
@@ -75,7 +77,8 @@ Now, you must inherit the REST4D.WebModule and create your own WebModule, implem
       private
           { Private declarations }
       public
-          procedure Initialize; override;
+          procedure Initialize(const pRESTEngine: TRESTEngine); override;
+          procedure SecurityLayer(out pRESTSecurity: IRESTSecurity); override;
       end;
     
     var
@@ -93,8 +96,14 @@ Now, you must inherit the REST4D.WebModule and create your own WebModule, implem
     procedure TBasicDemoWebModule.Initialize;
     begin
       inherited;
-      RESTEngine.AddController(TUserController);
-      RESTEngine.ServerName := 'ServerBasicDemo';
+      pRESTEngine.AddController(TUserController);
+    end;
+    
+    procedure TBasicDemoWebModule.SecurityLayer(out pRESTSecurity: IRESTSecurity);
+    begin
+      inherited;
+      pRESTSecurity := RESTServerDefault.Container
+         .FindServerByName('ServerBasicDemo').Info.Security;
     end;
 
 Now create your server using the container:
