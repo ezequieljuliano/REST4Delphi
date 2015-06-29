@@ -14,9 +14,11 @@ type
   TBasicDemoWebModule = class(TRESTWebModule)
   private
     { Private declarations }
+  strict protected
+    procedure ConfigureRESTEngine(const pRESTEngine: TRESTEngine); override;
+    function GetRESTSecurity(): IRESTSecurity; override;
   public
-    procedure Initialize(const pRESTEngine: TRESTEngine); override;
-    procedure SecurityLayer(out pRESTSecurity: IRESTSecurity); override;
+    { Public declarations }
   end;
 
 var
@@ -31,16 +33,15 @@ uses
 
 { TAppWebModule }
 
-procedure TBasicDemoWebModule.Initialize(const pRESTEngine: TRESTEngine);
+procedure TBasicDemoWebModule.ConfigureRESTEngine(const pRESTEngine: TRESTEngine);
 begin
   inherited;
   pRESTEngine.AddController(TUserController);
 end;
 
-procedure TBasicDemoWebModule.SecurityLayer(out pRESTSecurity: IRESTSecurity);
+function TBasicDemoWebModule.GetRESTSecurity: IRESTSecurity;
 begin
-  inherited;
-  pRESTSecurity := RESTServerDefault.Container.FindServerByName('ServerBasicDemo').Info.Security;
+  Result := RESTServerDefault.Container.FindServerByName('ServerBasicDemo').Info.Security;
 end;
 
 end.

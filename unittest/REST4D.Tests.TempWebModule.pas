@@ -15,8 +15,7 @@ type
   private
     { Private declarations }
   public
-    procedure Initialize(const pRESTEngine: TRESTEngine); override;
-    procedure SecurityLayer(out pRESTSecurity: IRESTSecurity); override;
+    { Public declarations }
   end;
 
 var
@@ -25,19 +24,5 @@ var
 implementation
 
 {$R *.dfm}
-
-{ TTempWebModule }
-
-procedure TTempWebModule.Initialize(const pRESTEngine: TRESTEngine);
-begin
-  inherited;
-
-end;
-
-procedure TTempWebModule.SecurityLayer(out pRESTSecurity: IRESTSecurity);
-begin
-  inherited;
-  pRESTSecurity := nil;
-end;
 
 end.

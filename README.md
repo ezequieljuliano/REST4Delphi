@@ -75,10 +75,12 @@ Now, you must inherit the REST4D.WebModule and create your own WebModule, implem
     
       TBasicDemoWebModule = class(TRESTWebModule)
       private
-          { Private declarations }
+         { Private declarations }
+      strict protected
+         procedure ConfigureRESTEngine(const pRESTEngine: TRESTEngine); override;
+         function GetRESTSecurity(): IRESTSecurity; override;
       public
-          procedure Initialize(const pRESTEngine: TRESTEngine); override;
-          procedure SecurityLayer(out pRESTSecurity: IRESTSecurity); override;
+         { Public declarations }  
       end;
     
     var
@@ -93,18 +95,17 @@ Now, you must inherit the REST4D.WebModule and create your own WebModule, implem
     
     { TAppWebModule }
     
-    procedure TBasicDemoWebModule.Initialize;
-    begin
-      inherited;
-      pRESTEngine.AddController(TUserController);
-    end;
+	procedure TAppWebModule.ConfigureRESTEngine(const pRESTEngine: TRESTEngine);
+	begin
+	  inherited;
+	  pRESTEngine.AddController(TAppController);
+	end;
     
-    procedure TBasicDemoWebModule.SecurityLayer(out pRESTSecurity: IRESTSecurity);
-    begin
-      inherited;
-      pRESTSecurity := RESTServerDefault.Container
+	function TAppWebModule.GetRESTSecurity: IRESTSecurity;
+	begin
+	  Result := RESTServerDefault.Container
          .FindServerByName('ServerBasicDemo').Info.Security;
-    end;
+	end;
 
 Now create your server using the container:
 
