@@ -114,7 +114,10 @@ type
   end;
 
   TRESTEngine = MVCFramework.TMVCEngine;
+
   TRESTController = MVCFramework.TMVCController;
+  TRESTControllerClass = class of TRESTController;
+
   TRESTWebContext = MVCFramework.TWebContext;
 
   THTTPMethod = MVCFramework.TMVCHTTPMethodType;
