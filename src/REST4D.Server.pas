@@ -117,6 +117,7 @@ type
 
   TRESTController = MVCFramework.TMVCController;
   TRESTControllerClass = class of TRESTController;
+  TRESTConfigKey = MVCFramework.TMVCConfigKey;
 
   TRESTWebContext = MVCFramework.TWebContext;
 
