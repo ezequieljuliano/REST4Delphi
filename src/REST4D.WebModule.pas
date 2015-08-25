@@ -25,9 +25,6 @@ type
 
 implementation
 
-uses
-  MVCFramework.Middleware.Authentication;
-
 {$R *.dfm}
 
 procedure TRESTWebModule.AfterConstruction;
@@ -38,7 +35,7 @@ begin
 
   FRESTSecurity := GetRESTSecurity();
   if (FRESTSecurity <> nil) then
-    FRESTEngine.AddMiddleware(TMVCBasicAuthenticationMiddleware.Create(FRESTSecurity))
+    FRESTEngine.AddMiddleware(TRESTBasicAuthenticationMiddleware.Create(FRESTSecurity))
 end;
 
 procedure TRESTWebModule.BeforeDestruction;

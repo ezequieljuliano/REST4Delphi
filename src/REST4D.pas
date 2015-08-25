@@ -5,7 +5,8 @@ interface
 uses
   System.SysUtils,
   System.Generics.Collections,
-  MVCFramework.Commons;
+  MVCFramework.Commons,
+  MVCFramework.Middleware.Authentication;
 
 type
 
@@ -68,6 +69,7 @@ type
   end;
 
   IRESTSecurity = MVCFramework.Commons.IMVCAuthenticationHandler;
+  TRESTBasicAuthenticationMiddleware = MVCFramework.Middleware.Authentication.TMVCBasicAuthenticationMiddleware;
 
   TRESTBaseSecurity = class abstract(TInterfacedObject)
   strict private
