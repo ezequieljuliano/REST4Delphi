@@ -64,11 +64,13 @@ type
 
   IRESTServer = interface
     ['{95E91DF0-6ABF-46B1-B995-FC748BC54568}']
+    function GetActive(): Boolean;
     function GetInfo(): IRESTServerInfo;
 
     procedure Start();
     procedure Stop();
 
+    property Active: Boolean read GetActive;
     property Info: IRESTServerInfo read GetInfo;
   end;
 
@@ -198,6 +200,7 @@ type
 
     FInfo: IRESTServerInfo;
   strict private
+    function GetActive(): Boolean;
     function GetInfo(): IRESTServerInfo;
     procedure Configuration(pServerInfo: IRESTServerInfo);
   public
@@ -206,7 +209,7 @@ type
 
     procedure Start();
     procedure Stop();
-
+    property Active : Boolean read GetActive;
     property Info: IRESTServerInfo read GetInfo;
   end;
 
@@ -340,6 +343,11 @@ begin
   if (FBridge <> nil) then
     FreeAndNil(FBridge);
   inherited;
+end;
+
+function TRESTServer.GetActive: Boolean;
+begin
+  Result := FBridge.Active;
 end;
 
 function TRESTServer.GetInfo: IRESTServerInfo;
