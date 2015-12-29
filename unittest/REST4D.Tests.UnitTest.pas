@@ -35,6 +35,7 @@ type
     function GetUsers(): TObjectList<TUser>;
 
     [RESTResource(THTTPMethod.httpPOST, '/users/save')]
+    [MapperListOf(TUser)]
     procedure PostUsers([Body] pBody: TObjectList<TUser>);
 
   end;

@@ -137,7 +137,7 @@ end;
 
 function TRESTfulClient.ConnectionTimeOut(const pConnectionTimeOut: Cardinal): TRESTfulClient;
 begin
-  FRESTClient.ConnectionTimeOut := pConnectionTimeOut;
+  FRESTClient.ConnectionTimeOut(pConnectionTimeOut);
   Result := Self;
 end;
 
@@ -297,7 +297,7 @@ end;
 
 function TRESTfulClient.ReadTimeOut(const pReadTimeOut: Cardinal): TRESTfulClient;
 begin
-  FRESTClient.ReadTimeOut := pReadTimeOut;
+  FRESTClient.ReadTimeOut(pReadTimeOut);
   Result := Self;
 end;
 
