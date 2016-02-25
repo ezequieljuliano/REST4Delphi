@@ -81,7 +81,7 @@ type
   end;
 
   TRESTAuthenticationDelegate = reference to procedure(const pUserName, pPassword: string;
-    pUserRoles: TList<string>; var pIsValid: Boolean);
+    pUserRoles: TList<string>; var pIsValid: Boolean; const SessionData: TDictionary<String, String>);
 
   TRESTAuthorizationDelegate = reference to procedure(pUserRoles: TList<string>;
     const pControllerQualifiedClassName: string; const pActionName: string; var pIsAuthorized: Boolean);
@@ -98,7 +98,7 @@ type
       var AuthenticationRequired: Boolean);
 
     procedure OnAuthentication(const UserName, Password: string; UserRoles: TList<string>;
-      var IsValid: Boolean);
+      var IsValid: Boolean; const SessionData: TDictionary<String, String>);
 
     procedure OnAuthorization(UserRoles: TList<string>; const ControllerQualifiedClassName: string;
       const ActionName: string; var IsAuthorized: Boolean);
@@ -116,11 +116,11 @@ begin
 end;
 
 procedure TRESTDefaultSecurity.OnAuthentication(const UserName, Password: string;
-  UserRoles: TList<string>; var IsValid: Boolean);
+  UserRoles: TList<string>; var IsValid: Boolean; const SessionData: TDictionary<String, String>);
 begin
   IsValid := True;
   if Assigned(FAuthenticationDelegate) then
-    FAuthenticationDelegate(UserName, Password, UserRoles, IsValid);
+    FAuthenticationDelegate(UserName, Password, UserRoles, IsValid, SessionData);
 end;
 
 procedure TRESTDefaultSecurity.OnAuthorization(UserRoles: TList<string>;
