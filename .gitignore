@@ -14,3 +14,4 @@
 /unittest/*.dsk
 /unittest/*.~dsk
 /samples/basicdemo/client/__history
+*.stat
